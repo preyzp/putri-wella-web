@@ -312,7 +312,7 @@ h3 {
 .article-item {
   min-width:0
 }
-.home-latest-link { display:block }
+.home-latest-link { display:block; margin-top:12px }
 .home-latest-cover {
   position:relative;
   display:block;
@@ -323,8 +323,8 @@ h3 {
   background:var(--subtle)
 }
 .home-latest-cover img { object-fit:cover }
-.home-latest-link > .eyebrow { margin-top:16px }
 .home-latest-item h3 { overflow-wrap:anywhere }
+.home-latest-item .excerpt, .article-item.home-latest-item .meta { margin-top:10px }
 .article-item h3 {
   margin-top:16px
 }

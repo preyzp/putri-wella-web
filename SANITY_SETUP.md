@@ -1,6 +1,6 @@
 # Setup Sanity lokal
 
-Blog, Tentang, dan Aktivitas kini membaca konten published Sanity. Kontak dan intro tetap memakai sumber sebelumnya. Website masih preview rancangan/noindex. Tidak ada seed, pembuatan proyek cloud, preview draft, webhook, atau integrasi interaksi.
+Blog, Tentang, Aktivitas, dan Pengaturan situs kini membaca konten published Sanity. Website masih preview rancangan/noindex. Tidak ada seed, pembuatan proyek cloud, preview draft, webhook, atau integrasi interaksi.
 
 ## Paket dan kompatibilitas
 
@@ -16,6 +16,12 @@ Referensi resmi: [embedded Studio](https://www.sanity.io/docs/nextjs/embedding-s
 4. Pastikan akun pengelola memiliki akses proyek/dataset di Sanity. Jalankan `pnpm install --frozen-lockfile`, lalu `pnpm dev` dan buka `/studio`. Restart development setelah mengubah env. Identifier NEXT_PUBLIC dibundel saat build: perubahan production membutuhkan build baru.
 
 Tidak membutuhkan token pada tahap ini. Jangan mengisi token atau rahasia apa pun dalam NEXT_PUBLIC, schema, browser, atau file yang dilacak Git. Client query saat ini tanpa token, hanya cocok untuk pembacaan published dari dataset publik. Dataset privat membutuhkan adapter server berizin yang belum dibuat; jangan menjadikan data sensitif publik sebagai jalan pintas.
+
+`SITE_URL=https://putriwellasibarani.vercel.app` menetapkan origin metadataBase/canonical publik, termasuk URL artikel utama `/id/tulisan/[slug]`. Isi di environment deployment dan `.env.local`; bila belum diisi, default memakai origin resmi yang sama. Tidak ada variabel URL situs kedua. URL harus absolut HTTP(S), tanpa kredensial; path/query diabaikan karena konfigurasi ini adalah origin. Tidak mengubah robots/noindex preview.
+
+Pengaturan published memakai singleton `siteSettings`: nama situs untuk header/footer/judul metadata, perkenalan beranda, deskripsi SEO default, serta email/LinkedIn/Instagram. Field EN kosong memakai ID. Kontak kosong atau tidak valid memakai konfigurasi kontak aktual terpusat; email harus alamat tunggal tanpa header, social link hanya HTTPS pada domain LinkedIn/Instagram yang sesuai, tanpa kredensial. Nama situs/copy default tetap dipakai bila Pengaturan kosong atau koneksi gagal; server hanya mencatat pesan generik tanpa error SDK/environment. Tidak ada fallback dummy untuk blog/profil/aktivitas. Query tetap published/no-store, dengan deduplikasi React hanya dalam request.
+
+Tulisan pilihan beranda tetap memakai referensi artikel published yang masih tersedia, lalu artikel published terbaru jika tidak ada pilihan valid. UI menampilkan satu tulisan unggulan sesuai layout yang ada. Label navigasi tetap dictionary. Belum ada section newsletter sehingga `newsletterIntro` belum dirender; tidak ada form atau pengiriman email baru. Schema tidak diubah.
 
 ## Perilaku saat belum terkonfigurasi
 

@@ -1,3 +1,4 @@
+import { pageMetadata } from '@/lib/site-metadata';
 import { Suspense } from 'react';
 import { connection } from 'next/server';
 import { notFound } from 'next/navigation';
@@ -18,7 +19,7 @@ async function PublishedActivities({ locale }: { locale: Locale }) {
 }
 
 export function generateStaticParams() { return [{ locale: 'id' }, { locale: 'en' }]; }
-export const metadata = { title: 'Aktivitas — Putri Wella Sibarani', description: 'Galeri aktivitas Putri Wella Sibarani. Preview rancangan website.' };
+export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/aktivitas', 'Aktivitas', 'Galeri aktivitas Putri Wella Sibarani. Preview rancangan website.'); }
 export default async function ActivitiesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();

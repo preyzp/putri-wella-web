@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation';
 import { publicCopy } from '@/lib/public-copy';
 import { useEffect, useRef, useState } from 'react';
 import type { Dictionary, Locale } from '@/lib/dictionaries';
-export function SiteHeader({ locale, t }: {
+export function SiteHeader({ locale, t, siteName = 'Putri Wella Sibarani' }: {
     locale: Locale;
     t: Dictionary;
+    siteName?: string;
 }) {
     const pathname = usePathname();
     const copy = publicCopy[locale];
@@ -46,7 +47,7 @@ export function SiteHeader({ locale, t }: {
         document.documentElement.dataset.theme = next;
     }
     return <header className="container site-header">
-  <Link className="wordmark" href={`/${locale}`}>Putri Wella Sibarani<span aria-hidden="true">.</span></Link>
+  <Link className="wordmark" href={`/${locale}`}>{siteName}<span aria-hidden="true">.</span></Link>
   <div className="header-controls">
    <nav aria-label={locale === 'id' ? 'Bahasa' : 'Language'} className="language-switch"><Link href={`/id${suffix}`} hrefLang="id" lang="id" aria-label="Bahasa Indonesia" aria-current={locale === 'id' ? 'page' : undefined}>ID</Link><span aria-hidden="true">/</span><Link href={`/en${suffix}`} hrefLang="en" lang="en" aria-label="English" aria-current={locale === 'en' ? 'page' : undefined}>EN</Link></nav>
    <button className="icon-button theme-toggle" type="button" onClick={toggleTheme}>

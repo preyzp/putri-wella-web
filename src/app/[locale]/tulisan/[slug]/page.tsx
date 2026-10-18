@@ -1,3 +1,5 @@
+import { readSettings } from '@/sanity/settings';
+import { siteName, siteDescription } from '@/lib/site-settings';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
@@ -20,8 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   await connection();
   const { slug } = await params;
   try {
-    const post = await readPost(slug);
-    return { title: post ? `${post.title} — Putri Wella Sibarani` : 'Tulisan tidak ditemukan', description: post?.excerpt || undefined };
+    const [post, settings] = await Promise.all([readPost(slug), readSettings()]);
+    return { title: post ? `${post.title} — ${siteName(settings)}` : 'Tulisan tidak ditemukan', description: post?.seo?.description?.trim() || post?.excerpt || siteDescription(settings, 'id'), alternates: post ? { canonical: postHref(post) } : undefined };
   } catch { return { title: 'Tulisan belum dapat dimuat' }; }
 }
 async function ArticleContent({ params }: Props) {
@@ -41,8 +43,7 @@ async function ArticleContent({ params }: Props) {
   }
   const date = postDate(post.publishedAt, 'id');
   return <PublicShell locale="id" title={post.title} blog>
-    {/* Relative to the current origin until the real production domain is supplied. */}
-    <link rel="canonical" href={postHref(post)} />
+
     <article className="reading-column" lang={post.language} aria-label={post.title}>
       <p className="article-meta">{post.categories.map(category => categoryLabel(category, 'id')).join(' · ')} · {formatLabel(post.format, 'id')} · {blogCopy.id.languages[post.language]}{date && <> · <time dateTime={post.publishedAt}>{date}</time></>}</p>
       {post.excerpt && <p className="article-summary">{post.excerpt}</p>}

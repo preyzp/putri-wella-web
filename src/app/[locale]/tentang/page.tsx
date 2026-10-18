@@ -1,3 +1,4 @@
+import { pageMetadata } from '@/lib/site-metadata';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { connection } from 'next/server';
@@ -18,7 +19,7 @@ async function PublishedAbout({ locale }: { locale: Locale }) {
 }
 
 export function generateStaticParams() { return [{ locale: 'id' }, { locale: 'en' }]; }
-export const metadata = { title: 'Tentang — Putri Wella Sibarani', description: 'Profil Putri Wella Sibarani. Preview rancangan website.' };
+export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/tentang', 'Tentang', 'Profil Putri Wella Sibarani. Preview rancangan website.'); }
 export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();

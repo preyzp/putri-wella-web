@@ -1,3 +1,4 @@
+import { pageMetadata } from '@/lib/site-metadata';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { connection } from 'next/server';
@@ -20,7 +21,7 @@ async function PublishedWriting({ locale }: { locale: Locale }) {
 }
 
 export function generateStaticParams() { return [{ locale: 'id' }, { locale: 'en' }]; }
-export const metadata = { title: 'Tulisan — Putri Wella Sibarani', description: 'Tulisan yang diterbitkan dalam bahasa naskah aslinya. Preview rancangan website Putri Wella Sibarani.' };
+export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/tulisan', 'Tulisan', 'Tulisan yang diterbitkan dalam bahasa naskah aslinya. Preview rancangan website Putri Wella Sibarani.'); }
 export default async function WritingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();

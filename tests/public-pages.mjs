@@ -71,6 +71,34 @@ try {
   };
   const count = () => evaluate("document.querySelectorAll('.article-grid .article-item').length");
 
+  if (process.env.CHECK_ONLY === 'settings') {
+    for (const locale of ['id', 'en']) for (const theme of ['light', 'dark']) {
+      await navigate(`/${locale}`);
+      await evaluate(`localStorage.setItem('putri-theme', '${theme}')`);
+      for (const width of [360, 768, 1440]) {
+        await call('Emulation.setDeviceMetricsOverride', { width, height: 1100, deviceScaleFactor: 1, mobile: false });
+        for (const page of ['', '/kontak']) {
+          await navigate(`/${locale}${page}`);
+          assert.equal(await evaluate("document.querySelector('.wordmark').textContent"), 'CONTROLLED_SITE_NAME.');
+          assert.equal(await evaluate("document.querySelector('.footer-name').textContent"), 'CONTROLLED_SITE_NAME');
+          assert.equal(await evaluate("document.querySelector('meta[name=description]').content"), locale === 'en' ? 'SEO_EN' : 'SEO_ID_FALLBACK');
+          assert.equal(await evaluate("document.querySelector('link[rel=canonical]').href"), `https://putriwellasibarani.vercel.app/${locale}${page}`);
+          assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
+          assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
+          assert(!await evaluate("document.querySelector('#main-navigation').textContent.includes('IGNORE_NAV_CMS')"));
+          if (!page) {
+            assert.equal(await evaluate("document.querySelector('.intro-bottom p').textContent"), locale === 'en' ? 'INTRO_EN' : 'INTRO_ID_FALLBACK');
+            assert(await evaluate("!!document.querySelector('.home-latest-cover')"));
+          } else {
+            assert.deepEqual(await evaluate("Array.from(document.querySelectorAll('.contact-link'), a => a.getAttribute('href'))"), ['mailto:approved@example.test', 'https://www.linkedin.com/in/approved/', 'https://www.instagram.com/approved/']);
+            assert.equal(await evaluate("document.querySelectorAll('form').length"), 0);
+          }
+        }
+      }
+      console.log(`PASS CONTROLLED settings browser ${locale}, ${theme}: 360/768/1440, header/footer, intro, contacts, metadata/canonical, dictionary navigation, no overflow`);
+    }
+  }
+
   if (process.env.CHECK_ONLY === 'home-covers') {
     for (const theme of ['light', 'dark']) {
       await navigate('/id');
@@ -92,20 +120,27 @@ try {
           await wait(80);
         }
         const cards = await evaluate(`Array.from(document.querySelectorAll('.home-latest-item'), card => {
-          const cover=card.querySelector('.home-latest-cover'), image=cover.querySelector('img'), link=card.querySelector('a'), title=card.querySelector('h3'), rect=cover.getBoundingClientRect();
-          return {ratio:rect.width/rect.height, radius:getComputedStyle(cover).borderRadius, gap:card.querySelector('.eyebrow').getBoundingClientRect().top-rect.bottom, width:rect.width, itemWidth:card.getBoundingClientRect().width, href:link.getAttribute('href'), namedBy:document.getElementById(link.getAttribute('aria-labelledby'))===title, image:image && {loaded:image.naturalWidth>0, alt:image.alt, fit:getComputedStyle(image).objectFit, sizes:image.sizes, src:decodeURIComponent(image.src)}, background:getComputedStyle(cover).backgroundColor};
+          const cover=card.querySelector('.home-latest-cover'), image=cover.querySelector('img'), link=card.querySelector('a'), title=card.querySelector('h3'), rect=cover.getBoundingClientRect(), category=card.querySelector('.eyebrow'), excerpt=card.querySelector('.excerpt'), meta=card.querySelector('.meta');
+          const ordered=[category,cover,title,excerpt,meta].filter(Boolean);
+          return {order:ordered.every((node,index)=>index===0 || !!(ordered[index-1].compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING)), categoryGap:rect.top-category.getBoundingClientRect().bottom, titleGap:title.getBoundingClientRect().top-rect.bottom, textGap:excerpt ? excerpt.getBoundingClientRect().top-title.getBoundingClientRect().bottom : null, metaGap:meta.getBoundingClientRect().top-(excerpt||title).getBoundingClientRect().bottom, contained:!image || (image.getBoundingClientRect().left>=rect.left && image.getBoundingClientRect().right<=rect.right && image.getBoundingClientRect().bottom<=rect.bottom), position:getComputedStyle(cover).position, ratio:rect.width/rect.height, radius:getComputedStyle(cover).borderRadius, width:rect.width, itemWidth:card.getBoundingClientRect().width, href:link.getAttribute('href'), namedBy:document.getElementById(link.getAttribute('aria-labelledby'))===title, image:image && {loaded:image.naturalWidth>0, alt:image.alt, fit:getComputedStyle(image).objectFit, sizes:image.sizes, src:decodeURIComponent(image.src)}, background:getComputedStyle(cover).backgroundColor};
         })`);
         assert(cards.length > 0);
         assert(cards.some(card => card.image?.loaded), 'Real Sanity asset loads through next/image');
         for (const card of cards) {
           assert(Math.abs(card.ratio - 1.6) < 0.01, JSON.stringify({ width, theme, card }));
-          assert.equal(card.radius, '8px'); assert.equal(card.gap, 16);
+          assert.equal(card.radius, '8px'); assert(card.order); assert(card.contained);
+          assert.equal(card.position, 'relative'); assert.equal(card.categoryGap, 12); assert.equal(card.titleGap, 16);
+          if (card.textGap !== null) assert(card.textGap >= 8 && card.textGap <= 12);
+          assert(card.metaGap >= 8 && card.metaGap <= 12);
+          if (width === 1440) assert(card.width < 350, 'Even a single article retains one desktop column');
+          if (width === 360) assert.equal(card.width, await evaluate("document.querySelector('.home-latest-item').parentElement.getBoundingClientRect().width"), 'Mobile is one full-width content column, allowing the browser scrollbar');
           assert.equal(card.width, card.itemWidth);
           assert(card.namedBy && card.href.startsWith('/id/tulisan/'));
           if (card.image) { assert(card.image.loaded); assert.equal(card.image.alt, ''); assert.equal(card.image.fit, 'cover'); assert(card.image.sizes.includes('342px')); }
         }
         if (process.env.HOME_COVERS_CONTROLLED === '1') {
-          assert.equal(cards.length, 3); assert(cards.some(card => !card.image));
+          assert.equal(cards.length, Number(process.env.HOME_COVERS_COUNT || 3));
+          if (cards.length === 3) { assert(cards.some(card => !card.image)); assert(cards.some(card => card.textGap === null), 'Missing excerpt is omitted'); }
           assert(cards.some(card => card.image?.src.includes('rect=')), 'Crop/hotspot projection reaches image URL');
           assert(await evaluate("document.querySelector('.home-latest-item h3').textContent.length > 180"));
         }
@@ -115,7 +150,7 @@ try {
         await evaluate("document.querySelector('.home-latest-link').focus()");
         assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
       }
-      console.log(`PASS home covers ${theme}: 360/768/1440, asset loading, 16:10, 8px radius, 16px gap, links, focus, no overflow${process.env.HOME_COVERS_CONTROLLED ? ', controlled missing cover/long title/crop' : ', real cloud'}`);
+      console.log(`PASS home covers ${theme}: 360/768/1440, category/thumbnail/title/excerpt/metadata order, 12/16/10px gaps, contained 16:10 images, single-column width, links/focus, no overflow${process.env.HOME_COVERS_CONTROLLED ? ', controlled covers/long title/crop' : ', real cloud'}`);
     }
   }
 
@@ -152,7 +187,7 @@ try {
       console.log(`PASS profile/activity browser ${locale}, ${theme}, 360/768/1440: responsive, image loads/alt, optional/empty state`);
     }
   }
-  if (!['keyboard', 'header-contact', 'profile', 'home-covers'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'header-contact', 'profile', 'home-covers', 'settings'].includes(process.env.CHECK_ONLY)) {
   // Run sanity-local.mjs and blog-cloud.mjs first to obtain a read-only cloud snapshot.
   const { post, categories } = JSON.parse(await readFile('node_modules/.cache/putri-sanity-check/cloud.json', 'utf8'));
   const path = `/id/tulisan/${encodeURIComponent(post.slug)}`;
@@ -187,7 +222,7 @@ try {
 
   await navigate(path);
   for (let attempt=0;attempt<80;attempt++){if(await evaluate("!!document.querySelector('.reading-column')"))break;await wait(100);}
-  assert.equal(await evaluate("document.querySelector('link[rel=canonical]').getAttribute('href')"), path);
+  assert.equal(await evaluate("document.querySelector('link[rel=canonical]').getAttribute('href')"), new URL(path, process.env.SITE_URL || 'https://putriwellasibarani.vercel.app').href);
   assert.equal(await evaluate("document.querySelector('h1').textContent"), post.title);
   assert(await evaluate("!!document.querySelector('time[datetime]')"));
   assert.equal(await evaluate("document.querySelectorAll('.related-section a[href]').length"), post.relatedPosts.length);
@@ -222,7 +257,7 @@ try {
     }
   }
   }
-  if (!['keyboard', 'blog', 'profile', 'home-covers'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'blog', 'profile', 'home-covers', 'settings'].includes(process.env.CHECK_ONLY)) {
     const errors = [];
     socket.addEventListener('message', event => {
       const message = JSON.parse(event.data);
@@ -307,7 +342,7 @@ try {
     assert.deepEqual(errors, [], 'No hydration or browser runtime errors');
     console.log('PASS live system theme, explicit override, no hydration/runtime errors');
   }
-  if (!['header-contact', 'blog', 'profile', 'home-covers'].includes(process.env.CHECK_ONLY)) {
+  if (!['header-contact', 'blog', 'profile', 'home-covers', 'settings'].includes(process.env.CHECK_ONLY)) {
   await call('Emulation.setDeviceMetricsOverride', { width: 360, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/en/tulisan');
   await call('Page.bringToFront');
