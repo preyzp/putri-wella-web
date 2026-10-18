@@ -1,0 +1,28 @@
+export const publicCopy = {
+  id: {
+    about: 'Tentang', activities: 'Aktivitas', contact: 'Kontak',
+    category: 'Kategori', format: 'Format', all: 'Semua', reset: 'Reset filter',
+    empty: 'Belum ada tulisan dengan kombinasi filter ini.', results: 'Jumlah tulisan',
+    listingIntro: 'Jelajahi gagasan tentang ekonomi, kebijakan publik, dan sastra.',
+    aboutIntro: 'Halaman profil ini masih berupa rancangan. Informasi pribadi akan diisi setelah disetujui Putri.',
+    placeholder: 'Placeholder — data belum tersedia.', photo: 'Slot foto diri — foto Putri belum tersedia.',
+    profileSections: ['Bio', 'Ruang lingkup pekerjaan', 'Pencapaian', 'Pendidikan', 'Keahlian', 'Organisasi', 'Penghargaan & publikasi'],
+    activitiesIntro: 'Galeri contoh untuk meninjau tata letak. Ilustrasi di bawah bukan dokumentasi kegiatan Putri.',
+    contactIntro: 'Informasi kontak belum diisi.', contactNote: 'Email, akun sosial, dan saluran kontak akan ditampilkan setelah disetujui Putri. Pengiriman pesan belum tersedia.',
+    contactChannels: ['Email', 'LinkedIn', 'Instagram'],
+    missing: 'Tulisan tidak ditemukan', missingNote: 'Alamat tulisan ini tidak tersedia. Silakan kembali ke daftar tulisan.',
+  },
+  en: {
+    about: 'About', activities: 'Activities', contact: 'Contact',
+    category: 'Category', format: 'Format', all: 'All', reset: 'Reset filters',
+    empty: 'No writing matches these filters.', results: 'Writing count',
+    listingIntro: 'Explore ideas on economics, public policy, and literature.',
+    aboutIntro: 'This profile is a work in progress. Personal information will be added after Putri approves it.',
+    placeholder: 'Placeholder — information not yet available.', photo: 'Portrait space — Putri’s photo is not yet available.',
+    profileSections: ['Biography', 'Scope of work', 'Achievements', 'Education', 'Skills', 'Organizations', 'Awards & publications'],
+    activitiesIntro: 'A sample gallery for reviewing the layout. These illustrations do not document Putri’s activities.',
+    contactIntro: 'Contact information has not been added yet.', contactNote: 'Email, social accounts, and contact channels will appear after Putri approves them. Messaging is not yet available.',
+    contactChannels: ['Email', 'LinkedIn', 'Instagram'],
+    missing: 'Writing not found', missingNote: 'This writing address is unavailable. Please return to the writing index.',
+  },
+} as const;
