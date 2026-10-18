@@ -1,6 +1,6 @@
 # Setup Sanity lokal
 
-Halaman publik masih preview dengan fixture. Setup ini belum memigrasikan data halaman, menjalankan seed, membuat proyek cloud, atau mengaktifkan preview/webhook/interaksi.
+Bagian blog publik kini membaca konten published Sanity. Profil, aktivitas, kontak, dan intro tetap memakai sumber sebelumnya. Website masih preview rancangan/noindex. Tidak ada seed, pembuatan proyek cloud, preview draft, webhook, atau integrasi interaksi.
 
 ## Paket dan kompatibilitas
 
@@ -20,7 +20,7 @@ Tidak membutuhkan token pada tahap ini. Jangan mengisi token atau rahasia apa pu
 ## Perilaku saat belum terkonfigurasi
 
 - `/studio` dan subroute-nya menampilkan petunjuk setup, tanpa mencetak nilai env. Nilai kosong, malformed, atau placeholder tidak mengaktifkan Studio. Format yang benar saja belum membuktikan proyek/dataset dan aksesnya valid.
-- Halaman publik masih **preview fixture yang eksplisit dan noindex**, bahkan setelah env diisi. Ini bukan fallback otomatis dari CMS, karena migrasi halaman belum dilakukan.
+- Blog publik membutuhkan konfigurasi Sanity dan membaca published pada setiap request. Dataset kosong menampilkan empty state; kegagalan konfigurasi/koneksi menampilkan error aman. Blog tidak memakai fallback dummy, termasuk pada development. Halaman non-blog mempertahankan fixture/placeholder sebelumnya.
 - `getContentSource()` di `src/sanity/source.ts` hanya mengizinkan pilihan fixture saat `NODE_ENV=development` dan env Sanity tidak lengkap. Production/test melempar error konfigurasi yang aman; client Sanity tidak membuat identifier rekaan. Kesalahan jaringan/otorisasi CMS tidak ditutupi dengan fixture.
 - Build tanpa env tetap bisa memvalidasi aplikasi dan halaman petunjuk Studio. Itu bukan bukti situs siap rilis production berbasis CMS.
 
@@ -32,9 +32,9 @@ Field wajib/validasi memblokir publish melalui Studio; draft tetap bisa disimpan
 
 `newsletterIssue` menyimpan rancangan editorial saja; aksi publish/delivery tidak ditawarkan di Studio. Tidak ada subscriber, consent/unsubscribe token, pesan kontak, atau email komentar. Data Instagram dalam model hanya field editorial tersembunyi untuk kesesuaian model; tidak ada fitur export atau publikasi sosial. Belum ada seed kategori. Setelah akun diverifikasi, kategori awal yang direncanakan adalah Politik & Kebijakan Publik, Ekonomi, Sastra.
 
-`src/sanity/client.ts` adalah server-only, menggunakan API version tetap `2026-10-18`, perspective `published`, tanpa token/stega, dan `no-store`. `fetchPublished()` menerima nama query dan parameter bertipe. Proyeksi di `queries.ts` eksplisit, menyaring draft/version termasuk referensi yang belum terbit, dan tidak membaca newsletter/Instagram. Kontrak hasil TypeScript ditulis berdampingan dengan proyeksi, belum merupakan TypeGen yang diekstrak dari akun. Tidak ada endpoint publik baru, live query, cache invalidation, atau preview.
+`src/sanity/client.ts` adalah server-only, menggunakan API version tetap `2026-10-18`, perspective `published`, tanpa token/stega, `useCdn: false`, dan `no-store`. `fetchPublished()` menerima nama query dan parameter bertipe. Proyeksi di `queries.ts` eksplisit, menyaring draft/version termasuk referensi yang belum terbit, dan tidak membaca newsletter/Instagram. Kontrak hasil TypeScript ditulis berdampingan dengan proyeksi, belum merupakan TypeGen yang diekstrak dari akun. Blog beranda/listing/detail memakai connection() dan Suspense untuk request-time data. Tidak ada live query, cache invalidation, atau preview.
 
-Renderer baru `src/sanity/portable-text.tsx` mendukung heading/paragraf/list/kutipan/marks, gambar dengan caption/kredit, dan bait puisi memakai kelas `.poem` yang sudah ada. Ia belum dipakai halaman publik. URL tautan diperiksa, teks di-escape React, gambar yang tidak ter-resolve menampilkan placeholder; gambar hanya diizinkan dari CDN Sanity proyek/dataset yang dikonfigurasi.
+Renderer `src/sanity/portable-text.tsx` kini dipakai detail publik, mendukung heading/paragraf/list/kutipan/marks, gambar dengan caption/kredit, dan bait puisi memakai kelas `.poem` yang sudah ada. URL tautan diperiksa, teks di-escape React, gambar yang tidak ter-resolve menampilkan placeholder; next/image hanya mengizinkan CDN Sanity proyek/dataset yang dikonfigurasi.
 
 ## Pemeriksaan dan batas verifikasi
 
@@ -46,4 +46,6 @@ pnpm build
 node tests/sanity-local.mjs
 ```
 
-Tes lokal tidak menghubungi Content Lake. Ia mengompilasi sepuluh schema, menjalankan GROQ terhadap dokumen uji in-memory untuk memastikan draft/version dan field di luar proyeksi tidak bocor, serta memeriksa pemisahan baris/bait dan link tidak aman. Uji server/browser Studio tanpa env dijalankan terpisah saat implementasi. Login, CORS, upload, query dataset nyata, dan alur draft/publish baru dapat diuji setelah konfigurasi akun diisi. Jangan klaim koneksi berhasil hanya berdasarkan build.
+Tes lokal tidak menghubungi Content Lake. Ia mengompilasi sepuluh schema, menjalankan GROQ terhadap dokumen uji in-memory untuk memastikan draft/version dan field di luar proyeksi tidak bocor, serta memeriksa pemisahan baris/bait dan link tidak aman. Uji Studio tanpa env hanya berlaku untuk build tanpa env.
+
+Setelah konfigurasi akun tersedia, `node tests/blog-cloud.mjs` memverifikasi pembacaan published nyata tanpa token/mutasi dan menyimpan snapshot publik pada folder cache yang diabaikan Git. Jalankan setelah sanity-local.mjs. Browser blog dapat diuji memakai `CHECK_ONLY=blog` lalu `node tests/public-pages.mjs`. `node tests/blog-states.mjs` menguji empty/error/404, draft, dan perubahan request berikutnya melalui respons API terkontrol pada proses uji, tanpa mengubah dataset. Lihat HANDOFF.md untuk hasil cloud dan mock yang dibedakan secara eksplisit. Login, otorisasi pengelola, CORS, upload, dan mutasi draft/publish cloud belum diuji oleh task pembacaan publik.

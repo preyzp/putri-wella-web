@@ -22,9 +22,5 @@ try {
     assert.match(html, /noindex/);
     console.log(`PASS ${path}: safe setup instructions, noindex`);
   }
-  // Focused regression checks only: Studio must not capture existing public routes or article URLs.
-  assert.equal((await fetch(`${origin}/id/tulisan/ekonomi`)).status, 200);
-  assert.equal((await fetch(`${origin}/id/tulisan/tidak-ada`)).status, 404);
-  assert.equal((await fetch(`${origin}/en/tulisan/ekonomi`, { redirect: 'manual' })).status, 308);
-  console.log('PASS public article route, HTTP 404, EN canonical redirect preserved');
+  // Blog now uses published CMS content; route/error regression lives in blog-states.mjs.
 } finally { server.kill(); }

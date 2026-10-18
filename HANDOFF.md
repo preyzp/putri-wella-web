@@ -1,6 +1,6 @@
 # Fondasi, halaman publik, dan konfigurasi Sanity lokal — 18 Oktober 2026
 
-Task 01, halaman publik task 02, dan konfigurasi lokal Sanity dari task 03 selesai sesuai scope pengguna. Beranda tetap satu preview, belum merupakan persetujuan layout final. Task 02 dilanjutkan atas instruksi pengguna tanpa menunggu keputusan layout. Migrasi halaman publik ke CMS belum dilakukan.
+Task 01, halaman publik task 02, konfigurasi lokal Sanity, dan migrasi bagian blog publik selesai sesuai scope pengguna. Beranda tetap satu preview, belum merupakan persetujuan layout final. Bagian blog kini membaca Sanity; profil, aktivitas, kontak dan intro tetap memakai sumber sebelumnya. Catatan tahap awal di bawah bersifat historis bila digantikan bagian migrasi blog terbaru.
 
 - Mempertahankan Next.js 16.4.2, React 19.3.0, Tailwind CSS 4.3.3, TypeScript 5.9.3, pnpm 12.11.2. Task 01/02 tidak menambah dependency; paket Sanity untuk tahap lokal dicatat di bawah.
 - Jalankan `pnpm dev`; pemeriksaan: `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build`.
@@ -8,7 +8,7 @@ Task 01, halaman publik task 02, dan konfigurasi lokal Sanity dari task 03 seles
 - Token semantik Midnight Azure berada di `src/app/globals.css`, terhubung ke Tailwind v4. DM Serif Display 400 dan DM Sans memakai next/font dan disajikan lokal setelah build. Build pertama memerlukan akses Google Fonts.
 - Tema mengikuti sistem sebelum ada pilihan, dengan toggle ikon Moon/Sun untuk memilih gelap/terang. Pilihan tersimpan di localStorage dengan key `putri-theme`, inisialisasi sebelum paint, fallback CSS saat JavaScript tidak tersedia, dan penyimpanan yang diblokir tidak membuat kontrol error. Tidak ada pemilih tiga mode.
 - Menu mobile memindahkan fokus ke navigasi saat dibuka, Escape menutup dan mengembalikan fokus. Skip link dan fokus terlihat tersedia. Navigasi kini menuju Beranda, Tulisan, Tentang, Aktivitas, dan Kontak; indikator aktif mengikuti halaman. Pemilih bahasa mempertahankan bagian halaman; pada detail artikel menuju listing bahasa tujuan karena naskah belum memiliki terjemahan.
-- Fixture terpusat di `src/fixtures/posts.ts` dan `src/fixtures/pages.ts`, berlabel dummy. Tanggal artikel adalah tanggal contoh yang ditandai pada detail. Tidak ada riwayat, pencapaian, foto diri, atau identitas instansi rekaan. Puisi mempertahankan baris dan bait. Semua halaman preview tetap noindex.
+- Fixture lama tetap tersimpan di `src/fixtures/posts.ts` tetapi tidak diimpor blog publik. Fixture profil/aktivitas tetap pada sumber sebelumnya dan berlabel dummy. Tanggal blog sekarang berasal dari publishedAt Sanity. Tidak ada kredensial rekaan. Puisi mempertahankan baris/bait. Semua halaman preview tetap noindex.
 
 ## Halaman publik dan keputusan URL
 
@@ -69,4 +69,26 @@ Seluruh naskah, tanggal, gambar, dan data profil masih fixture/placeholder; perl
 
 Yang perlu pengguna isi: `NEXT_PUBLIC_SANITY_PROJECT_ID` dan `NEXT_PUBLIC_SANITY_DATASET` dari proyek/dataset yang benar, lalu akses anggota proyek dan CORS origin lokal yang tepat melalui pengaturan Sanity. Tidak ada token yang dibutuhkan saat ini. Konfigurasi berformat valid belum membuktikan akun/dataset bisa diakses. Belum ada konfigurasi akun nyata, sehingga koneksi cloud menjadi batas verifikasi yang tersisa.
 
-Task berikutnya: hubungkan identifier/akun Sanity yang nyata sesuai `SANITY_SETUP.md` dan uji Studio/login/schema terhadap proyek yang disepakati sebelum mengerjakan migrasi halaman publik atau integrasi preview/webhook.
+Task berikutnya pada akhir tahap konfigurasi lokal adalah menghubungkan akun; pembacaan publik sudah diverifikasi pada tahap migrasi di bawah. Login pengelola dan mutasi cloud tetap di luar verifikasi ini.
+
+## Migrasi blog publik ke Sanity — hasil terbaru
+
+- Beranda menggunakan `home` query: satu featuredPosts published dari Pengaturan jika ada, jika belum ada memakai artikel published terbaru yang nyata; daftar terbaru maksimal tiga. Listing membaca posts dan categories published; filter memakai ID kategori dan format CMS (`article`, `short-note`, `poem`). Kategori EN kosong memakai judul ID. Tidak ada pengganti dummy untuk dataset kosong atau error, termasuk pada development.
+- Detail dan tulisan terkait memakai typed projections dan renderer Portable Text yang sudah disiapkan. Related memakai pilihan editorial yang masih published; jika tidak ada, memilih maksimal dua tulisan published lain dengan prioritas kategori yang sama lalu terbaru. Tidak ada related dummy jika hanya satu artikel.
+- URL utama seluruh artikel tetap `/id/tulisan/[slug]`, terlepas dari bahasa naskah atau UI. Alias EN redirect 308 ke URL utama; bahasa asli ditampilkan, bukan terjemahan buatan. Canonical tetap origin-relative sampai domain produksi disetujui.
+- `src/proxy.ts` kini mengecek query minimal postRoute published, bukan fixture/build-time slug. Slug yang hilang/unpublished menghasilkan HTTP 404 sebelum streaming. Jika Sanity gagal diakses, proxy tidak menganggapnya 404; halaman menampilkan error aman dan retry GET. Error tidak mencetak detail SDK, URL upstream, atau environment. Status respons streaming saat error dapat tetap 200; tampilan error dibedakan jelas dari kosong.
+- `generateStaticParams` detail hanya menetapkan root locale ID/EN, tanpa daftar slug. Blog memakai connection() di bawah Suspense agar query berjalan saat request, sesuai Cache Components yang sudah aktif. React cache di readPost hanya deduplikasi metadata/render dalam satu request. `fetchPublished`: `cache: no-store`, perspective published, API `useCdn: false`, tanpa token/stega. Tidak ada cache lintas request atau webhook; prefetch link kartu/detail dinonaktifkan.
+- Cover/gambar isi memakai `SanityImage` dan next/image, dengan remotePatterns khusus `cdn.sanity.io/images/<project terkonfigurasi>/<dataset terkonfigurasi>/**`, bukan wildcard semua proyek. Alt/caption/kredit dari proyeksi; gambar tanpa asset tetap aman. Tidak ada perubahan schema, desain, konten cloud, atau sumber halaman lain.
+- Konten dan tanggal pada blog tidak lagi ditandai dummy secara otomatis. Label preview rancangan/noindex dipertahankan. Metadata blog tidak mengklaim seluruh kontennya dummy.
+
+Validasi: lint, TypeScript, build produksi lulus. Build menghasilkan shell blog parsial dan artikel request-time, bukan daftar artikel yang dibekukan saat build. Tes query offline lulus untuk proyeksi baru dan penyaringan draft/version.
+
+Verifikasi **cloud read-only nyata** (`node tests/blog-cloud.mjs`): satu artikel published dan satu kategori berhasil dibaca tanpa token; cover mempunyai alt, asset HEAD 200. Cover artikel tes tidak memiliki caption dan isi saat diuji tidak mempunyai gambar, sehingga tidak diklaim berhasil diuji di cloud untuk dua kondisi itu. Slug yang tidak ada mengembalikan null dari API. Tidak ada create/edit/publish/unpublish/delete/seed cloud.
+
+Verifikasi **browser terhadap cloud** (`CHECK_ONLY=blog`, `node tests/public-pages.mjs` setelah tes local/cloud): artikel published tampil di listing/detail, filter kategori/format/reset bekerja, detail canonical/date/language benar, cover dimuat melalui optimizer next/image, related kosong sesuai satu artikel, salin tautan berhasil/gagal, HTTP 404 dan redirect EN lulus. Beranda/listing ID/EN dan detail di kedua tema pada 360/768/1440 px tidak overflow. Halaman lain yang tidak berubah tidak diuji ulang.
+
+Verifikasi **lokal terkontrol, bukan mutasi cloud** (`node tests/blog-states.mjs`): respons API diintersep hanya pada proses test melalui Node preload di tests/helpers. Dataset kosong menampilkan empty state tanpa fixture; error upstream menampilkan error tanpa raw error; draft/version dan referensi draft tidak bocor; kategori EN kosong memakai ID; puisi mempertahankan dua bait dan baris; URL baru yang ditambahkan sesudah build/server start langsung 200; perubahan judul terlihat di beranda/listing/detail pada request berikutnya; unpublish lokal menjadi 404; alias EN 308. Cover dan gambar isi dengan alt/caption diuji dengan dokumen lokal yang memakai asset published yang sudah tersedia, tanpa upload atau perubahan cloud. Semua request CMS pada uji terkontrol terbukti published, no-store, dan tanpa CDN.
+
+Tidak diperlukan environment variable atau token tambahan. Dua identifier publik yang sudah diisi tetap cukup untuk dataset publik ini. Jika identifier/dataset berubah, build ulang untuk allowlist gambar dan bundel NEXT_PUBLIC. Tidak ada commit/push.
+
+Batas tersisa: belum ada gambar isi/caption pada artikel cloud yang tersedia untuk verifikasi nyata; alur publish/edit/unpublish cloud tidak dijalankan karena pengguna melarang mutasi. Perilaku tersebut diuji terkontrol dan tetap perlu dicoba pengguna melalui Studio. Preview draft, webhook/optimasi cache, dan seluruh fitur interaksi lain tetap belum dibuat. Task berikutnya: pengguna memverifikasi alur editorial melalui Studio, lalu lanjut webhook dan strategi cache sesuai scope berikutnya.

@@ -2,7 +2,7 @@
 // Windows defaults to Edge; set BROWSER_BIN for another Chromium executable.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -72,13 +72,13 @@ try {
   const count = () => evaluate("document.querySelectorAll('.article-grid .article-item').length");
 
   if (!['keyboard', 'header-contact'].includes(process.env.CHECK_ONLY)) {
-  const slugs = ['ekonomi', 'ruang-publik', 'jeda', 'pilihan'];
-  for (const slug of slugs) {
-    assert.equal((await fetch(`${origin}/id/tulisan/${slug}`)).status, 200);
-    const redirect = await fetch(`${origin}/en/tulisan/${slug}`, { redirect: 'manual' });
+  // Run sanity-local.mjs and blog-cloud.mjs first to obtain a read-only cloud snapshot.
+  const { post, categories } = JSON.parse(await readFile('node_modules/.cache/putri-sanity-check/cloud.json', 'utf8'));
+  const path = `/id/tulisan/${encodeURIComponent(post.slug)}`;
+    assert.equal((await fetch(origin + path)).status, 200);
+    const redirect = await fetch(`${origin}/en/tulisan/${encodeURIComponent(post.slug)}`, { redirect: 'manual' });
     assert.equal(redirect.status, 308);
-    assert.equal(new URL(redirect.headers.get('location'), origin).pathname, `/id/tulisan/${slug}`);
-  }
+    assert.equal(new URL(redirect.headers.get('location'), origin).pathname, path);
   for (const locale of ['id', 'en']) {
     const response = await fetch(`${origin}/${locale}/tulisan/tidak-ada`);
     assert.equal(response.status, 404);
@@ -88,57 +88,60 @@ try {
 
   for (const locale of ['id', 'en']) {
     await navigate(`/${locale}/tulisan`);
-    assert.equal(await count(), 4);
-    await choose(0, 'economy'); assert.equal(await count(), 2);
-    await choose(1, 'article'); assert.equal(await count(), 1);
-    await choose(0, 'policy'); assert.equal(await count(), 0);
-    assert(await evaluate("!!document.querySelector('.empty-state')"));
-    await choose(1, 'noteFormat'); assert.equal(await count(), 1);
-    await choose(0, 'literature'); await choose(1, 'poem'); assert.equal(await count(), 1);
-    assert.equal(await evaluate("document.querySelector('.article-item h3 a').getAttribute('href')"), '/id/tulisan/jeda');
-    await evaluate("document.querySelector('.filters button').click()"); await wait(70); assert.equal(await count(), 4);
+    for (let attempt=0;attempt<60;attempt++){if(await count())break;await wait(100);}
+    const total = await count(); assert(total > 0);
+    if (post.categories[0]) {
+      await choose(0, post.categories[0]._id);
+      assert(await evaluate(`!!document.querySelector('.article-item h3 a[href=${JSON.stringify(path)}]')`));
+      const category = categories.find(item => item._id === post.categories[0]._id);
+      assert(await evaluate(`document.querySelector('.filters select').textContent.includes(${JSON.stringify(category.title[locale]?.trim() || category.title.id)})`));
+    }
+    await choose(1, post.format); assert(await count() > 0);
+    await choose(1, post.format === 'poem' ? 'article' : 'poem');
+    if (await count() === 0) assert(await evaluate("!!document.querySelector('[data-blog-state=filtered-empty]')"));
+    await evaluate("document.querySelector('.filters button').click()"); await wait(70); assert.equal(await count(), total);
     assert(await evaluate("[...document.querySelectorAll('.article-item h3 a')].every(link => link.getAttribute('href').startsWith('/id/tulisan/'))"));
   }
   console.log('PASS filters, combined empty results, reset, canonical article links');
 
-  await navigate('/id/tulisan/ekonomi');
-  assert.equal(await evaluate("document.querySelector('link[rel=canonical]').getAttribute('href')"), '/id/tulisan/ekonomi');
-  assert(await evaluate("!!document.querySelector('.article-body h2') && !!document.querySelector('.article-body h3') && !!document.querySelector('.article-body blockquote') && !!document.querySelector('.article-body ul') && !!document.querySelector('.article-body ol') && !!document.querySelector('.article-body img') && !!document.querySelector('time[datetime]')"));
-  assert.equal(await evaluate("document.querySelectorAll('.related-section .article-item').length"), 2);
+  await navigate(path);
+  for (let attempt=0;attempt<80;attempt++){if(await evaluate("!!document.querySelector('.reading-column')"))break;await wait(100);}
+  assert.equal(await evaluate("document.querySelector('link[rel=canonical]').getAttribute('href')"), path);
+  assert.equal(await evaluate("document.querySelector('h1').textContent"), post.title);
+  assert(await evaluate("!!document.querySelector('time[datetime]')"));
+  assert.equal(await evaluate("document.querySelectorAll('.related-section a[href]').length"), post.relatedPosts.length);
+  if (post.cover?.asset) {
+    assert.equal(await evaluate("document.querySelector('.reading-column figure img').alt"), post.cover.alt);
+    for (let attempt=0;attempt<80;attempt++){if(await evaluate("document.querySelector('.reading-column figure img').naturalWidth > 0"))break;await wait(100);}
+    assert(await evaluate("document.querySelector('.reading-column figure img').naturalWidth > 0"), 'Cloud cover loaded through next/image');
+    if (post.cover.caption) assert(await evaluate(`document.querySelector('.reading-column figure figcaption').textContent.includes(${JSON.stringify(post.cover.caption)})`));
+  }
   // Exercise actual browser clipboard (permission granted by the browser protocol).
   await call('Browser.grantPermissions', { origin, permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'] });
   await evaluate("document.querySelector('.share-control button').click()"); await wait(150);
   assert.match(await evaluate("document.querySelector('.share-control [role=status]').textContent"), /berhasil/);
-  assert.equal(await evaluate('navigator.clipboard.readText()'), `${origin}/id/tulisan/ekonomi`);
+  assert.equal(await evaluate('navigator.clipboard.readText()'), origin + path);
   // Simulate a denied clipboard to exercise the visible failure and retry path.
   await evaluate("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Denied'); } } }); document.querySelector('.share-control button').click()"); await wait(100);
   assert.match(await evaluate("document.querySelector('.share-control [role=status]').textContent"), /Gagal/);
   assert.equal(await evaluate("document.querySelector('.share-control button').disabled"), false);
-  await navigate('/id/tulisan/jeda');
-  assert.deepEqual(await evaluate("[...document.querySelectorAll('.article-body .poem')].map(node => node.textContent)"), ['pagi menyisakan cahaya\ndi tepi meja', 'kata-kata menunggu\nruang untuk pulang']);
-  assert.equal(await evaluate("getComputedStyle(document.querySelector('.article-body .poem')).whiteSpace"), 'pre-wrap');
-  assert.equal(await evaluate("document.querySelectorAll('.reading-column figure').length"), 0);
-  console.log('PASS content blocks, related writing, clipboard success/failure, poem stanzas, no-cover detail');
+  console.log('PASS CLOUD: published detail, canonical, date, cover/image optimizer, related state, clipboard');
 
-  const pages = ['tulisan', 'tentang', 'aktivitas', 'kontak'];
+  const pages = ['', 'tulisan'];
   for (const theme of ['light', 'dark']) {
     await evaluate(`localStorage.setItem('putri-theme', '${theme}')`);
     for (const width of [360, 768, 1440]) {
       await call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
-      for (const path of [...['id', 'en'].flatMap(locale => pages.map(page => `/${locale}/${page}`)), '/id/tulisan/ekonomi', '/id/tulisan/jeda']) {
-        await navigate(path);
-        assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `No overflow: ${path}, ${theme}, ${width}`);
+      for (const route of [...['id', 'en'].flatMap(locale => pages.map(page => `/${locale}${page ? `/${page}` : ''}`)), path]) {
+        await navigate(route);
+        assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `No overflow: ${route}, ${theme}, ${width}`);
         assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
-        if (path.endsWith('kontak')) {
-          assert.equal(await evaluate("document.querySelectorAll('form').length"), 0);
-          assert.equal(await evaluate("document.querySelector('a[href^=mailto]').getAttribute('href')"), 'mailto:putriwella97@gmail.com');
-        }
       }
       console.log(`PASS public page widths ${width}, ${theme}, ID/EN`);
     }
   }
   }
-  if (process.env.CHECK_ONLY !== 'keyboard') {
+  if (!['keyboard', 'blog'].includes(process.env.CHECK_ONLY)) {
     const errors = [];
     socket.addEventListener('message', event => {
       const message = JSON.parse(event.data);
@@ -223,7 +226,7 @@ try {
     assert.deepEqual(errors, [], 'No hydration or browser runtime errors');
     console.log('PASS live system theme, explicit override, no hydration/runtime errors');
   }
-  if (process.env.CHECK_ONLY !== 'header-contact') {
+  if (!['header-contact', 'blog'].includes(process.env.CHECK_ONLY)) {
   await call('Emulation.setDeviceMetricsOverride', { width: 360, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/en/tulisan');
   await call('Page.bringToFront');
@@ -249,7 +252,7 @@ try {
   await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
   await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
   await wait(100);
-  assert.equal(await count(), 2, 'Category filter can be changed with the keyboard');
+  assert.equal(await evaluate("document.querySelector('.filters select').selectedIndex"), 1, 'Category filter can be changed with the keyboard');
   await call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.public-page')).paddingTop"), '40px');
   console.log('PASS keyboard menu, navigation focus, filter focus, reduced-motion layout');

@@ -6,7 +6,7 @@ import { queries, type QueryParameters, type QueryResults } from './queries';
 export function getPublicSanityClient() {
   const environment = getSanityEnvironment();
   if (!environment.configured) throw new Error('Sanity belum dikonfigurasi. Isi identifier publik di .env.local sesuai SANITY_SETUP.md.');
-  return createClient({ ...environment.value, perspective: 'published', useCdn: true, stega: false });
+  return createClient({ ...environment.value, perspective: 'published', useCdn: false, stega: false, timeout: 10000, maxRetries: 1 });
 }
 
 export function fetchPublished<Key extends keyof QueryResults>(key: Key, params: QueryParameters[Key]): Promise<QueryResults[Key]> {

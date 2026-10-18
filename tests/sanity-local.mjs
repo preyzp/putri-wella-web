@@ -65,7 +65,7 @@ const dataset = [
 const results = {};
 for (const [key, query] of Object.entries(queries)) {
   const parsed = parse(query);
-  results[key] = await (await evaluate(parsed, { dataset, params: { slug: 'contoh-lokal' } })).get();
+  results[key] = await (await evaluate(parsed, { dataset, params: { slug: 'contoh-lokal', id: 'post-public', categoryIds: ['category-public'] } })).get();
   assert(!JSON.stringify(results[key]).includes(privateValue), `${key}: unprojected fields must stay private`);
 }
 assert.deepEqual(results.posts.map(post => post._id), ['post-public']);

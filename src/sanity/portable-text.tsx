@@ -4,7 +4,7 @@ import { getSanityEnvironment } from './env';
 import { safeHref } from './links';
 import type { PoemStanza, PublicBody, PublicImage } from './types';
 
-function SanityImage({ value }: { value: PublicImage }) {
+export function SanityImage({ value }: { value: PublicImage }) {
   const environment = getSanityEnvironment();
   const asset = value.asset;
   let src: string | null = null;
@@ -16,7 +16,7 @@ function SanityImage({ value }: { value: PublicImage }) {
     } catch { /* Invalid or unresolved image reference: show a readable placeholder. */ }
   }
   return <figure>
-    {src && asset && asset.width > 0 && asset.height > 0 ? <Image unoptimized src={src} alt={value.alt || ''} width={asset.width} height={asset.height} sizes="(max-width: 768px) 100vw, 720px" /> : <p>Gambar belum tersedia.</p>}
+    {src && asset && asset.width > 0 && asset.height > 0 ? <Image src={src} alt={value.alt || ''} width={asset.width} height={asset.height} sizes="(max-width: 768px) 100vw, 720px" /> : <p>Gambar belum tersedia.</p>}
     {(value.caption || value.credit) && <figcaption>{value.caption}{value.credit && <span> — {value.credit}</span>}</figcaption>}
   </figure>;
 }
@@ -35,7 +35,7 @@ const components: PortableTextComponents = {
   unknownType: () => <p>Blok konten ini belum didukung.</p>,
 };
 
-// Separate renderer: deliberately not connected to fixture pages during local setup.
+// Shared by public Sanity detail and offline renderer checks.
 export function SanityPortableText({ value }: { value: PublicBody }) {
   return <div className="article-body"><PortableText value={value} components={components} /></div>;
 }
