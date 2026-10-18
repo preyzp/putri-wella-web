@@ -12,6 +12,7 @@
     "@portabletext/react": "7.0.1",
     "@portabletext/types": "4.0.2",
     "@sanity/client": "7.26.2",
+    "@sanity/image-url": "2.1.1",
     "lucide-react": "1.59.0",
     "next": "16.4.2",
     "next-sanity": "13.3.4",

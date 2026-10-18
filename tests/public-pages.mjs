@@ -71,7 +71,88 @@ try {
   };
   const count = () => evaluate("document.querySelectorAll('.article-grid .article-item').length");
 
-  if (!['keyboard', 'header-contact'].includes(process.env.CHECK_ONLY)) {
+  if (process.env.CHECK_ONLY === 'home-covers') {
+    for (const theme of ['light', 'dark']) {
+      await navigate('/id');
+      await evaluate(`localStorage.setItem('putri-theme', '${theme}')`);
+      for (const width of [360, 768, 1440]) {
+        await call('Emulation.setDeviceMetricsOverride', { width, height: 1200, deviceScaleFactor: 1, mobile: false });
+        await navigate('/id');
+        for (let attempt = 0; attempt < 100; attempt++) {
+          if (await evaluate("!!document.querySelector('.home-latest-cover')")) break;
+          await wait(80);
+        }
+        const imageCount = await evaluate("document.querySelectorAll('.home-latest-cover img').length");
+        for (let index = 0; index < imageCount; index++) {
+          await evaluate(`document.querySelectorAll('.home-latest-cover img')[${index}].scrollIntoView()`);
+          await wait(100);
+        }
+        for (let attempt = 0; attempt < 100; attempt++) {
+          if (await evaluate("[...document.querySelectorAll('.home-latest-cover img')].every(image => image.complete && image.naturalWidth > 0)")) break;
+          await wait(80);
+        }
+        const cards = await evaluate(`Array.from(document.querySelectorAll('.home-latest-item'), card => {
+          const cover=card.querySelector('.home-latest-cover'), image=cover.querySelector('img'), link=card.querySelector('a'), title=card.querySelector('h3'), rect=cover.getBoundingClientRect();
+          return {ratio:rect.width/rect.height, radius:getComputedStyle(cover).borderRadius, gap:card.querySelector('.eyebrow').getBoundingClientRect().top-rect.bottom, width:rect.width, itemWidth:card.getBoundingClientRect().width, href:link.getAttribute('href'), namedBy:document.getElementById(link.getAttribute('aria-labelledby'))===title, image:image && {loaded:image.naturalWidth>0, alt:image.alt, fit:getComputedStyle(image).objectFit, sizes:image.sizes, src:decodeURIComponent(image.src)}, background:getComputedStyle(cover).backgroundColor};
+        })`);
+        assert(cards.length > 0);
+        assert(cards.some(card => card.image?.loaded), 'Real Sanity asset loads through next/image');
+        for (const card of cards) {
+          assert(Math.abs(card.ratio - 1.6) < 0.01, JSON.stringify({ width, theme, card }));
+          assert.equal(card.radius, '8px'); assert.equal(card.gap, 16);
+          assert.equal(card.width, card.itemWidth);
+          assert(card.namedBy && card.href.startsWith('/id/tulisan/'));
+          if (card.image) { assert(card.image.loaded); assert.equal(card.image.alt, ''); assert.equal(card.image.fit, 'cover'); assert(card.image.sizes.includes('342px')); }
+        }
+        if (process.env.HOME_COVERS_CONTROLLED === '1') {
+          assert.equal(cards.length, 3); assert(cards.some(card => !card.image));
+          assert(cards.some(card => card.image?.src.includes('rect=')), 'Crop/hotspot projection reaches image URL');
+          assert(await evaluate("document.querySelector('.home-latest-item h3').textContent.length > 180"));
+        }
+        assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
+        assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `No overflow at ${width}`);
+        assert.equal(await evaluate("document.querySelectorAll('.featured img').length"), 0);
+        await evaluate("document.querySelector('.home-latest-link').focus()");
+        assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
+      }
+      console.log(`PASS home covers ${theme}: 360/768/1440, asset loading, 16:10, 8px radius, 16px gap, links, focus, no overflow${process.env.HOME_COVERS_CONTROLLED ? ', controlled missing cover/long title/crop' : ', real cloud'}`);
+    }
+  }
+
+  if (process.env.CHECK_ONLY === 'profile') {
+    for (const locale of ['id', 'en']) for (const theme of ['light', 'dark']) {
+      await navigate(`/${locale}/tentang`);
+      await evaluate(`localStorage.setItem('putri-theme', '${theme}')`);
+      for (const width of [360, 768, 1440]) {
+        await call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
+        for (const page of ['tentang', 'aktivitas']) {
+          await navigate(`/${locale}/${page}`);
+          for (let attempt = 0; attempt < 100; attempt++) {
+            if (await evaluate("!!document.querySelector('[data-about-content], [data-activity-gallery], [data-content-state=empty], [data-content-state=error]')")) break;
+            await wait(70);
+          }
+          assert(!await evaluate("!!document.querySelector('[data-content-state=error]')"));
+          assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `${page} no overflow at ${width}`);
+          assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
+          if (page === 'tentang') assert(await evaluate("!!document.querySelector('[data-about-content]')"));
+          if (page === 'aktivitas' && process.env.PROFILE_EXPECT_GALLERY === '1') assert(await evaluate("!!document.querySelector('[data-activity-gallery]')"));
+          for (let attempt = 0; attempt < 100; attempt++) {
+            if (await evaluate("[...document.querySelectorAll('main img')].every(image => image.complete && image.naturalWidth > 0)")) break;
+            await wait(80);
+          }
+          assert(await evaluate("[...document.querySelectorAll('main img')].every(image => image.alt.trim() && image.naturalWidth > 0)"), 'Images load through configured optimizer with alt text');
+          assert.equal(await evaluate("document.querySelectorAll('.portrait-placeholder').length"), 0);
+          if (page === 'aktivitas') assert.equal(await evaluate("document.querySelectorAll('.profile-portrait').length"), 0);
+          if (process.env.SCREENSHOT_PATH && locale === 'en' && theme === 'dark' && width === 360 && page === 'tentang') {
+            const screenshot = await call('Page.captureScreenshot', { format: 'png' });
+            await writeFile(process.env.SCREENSHOT_PATH, Buffer.from(screenshot.data, 'base64'));
+          }
+        }
+      }
+      console.log(`PASS profile/activity browser ${locale}, ${theme}, 360/768/1440: responsive, image loads/alt, optional/empty state`);
+    }
+  }
+  if (!['keyboard', 'header-contact', 'profile', 'home-covers'].includes(process.env.CHECK_ONLY)) {
   // Run sanity-local.mjs and blog-cloud.mjs first to obtain a read-only cloud snapshot.
   const { post, categories } = JSON.parse(await readFile('node_modules/.cache/putri-sanity-check/cloud.json', 'utf8'));
   const path = `/id/tulisan/${encodeURIComponent(post.slug)}`;
@@ -141,7 +222,7 @@ try {
     }
   }
   }
-  if (!['keyboard', 'blog'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'blog', 'profile', 'home-covers'].includes(process.env.CHECK_ONLY)) {
     const errors = [];
     socket.addEventListener('message', event => {
       const message = JSON.parse(event.data);
@@ -226,7 +307,7 @@ try {
     assert.deepEqual(errors, [], 'No hydration or browser runtime errors');
     console.log('PASS live system theme, explicit override, no hydration/runtime errors');
   }
-  if (!['header-contact', 'blog'].includes(process.env.CHECK_ONLY)) {
+  if (!['header-contact', 'blog', 'profile', 'home-covers'].includes(process.env.CHECK_ONLY)) {
   await call('Emulation.setDeviceMetricsOverride', { width: 360, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/en/tulisan');
   await call('Page.bringToFront');
@@ -257,7 +338,7 @@ try {
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.public-page')).paddingTop"), '40px');
   console.log('PASS keyboard menu, navigation focus, filter focus, reduced-motion layout');
   }
-  if (process.env.SCREENSHOT_PATH) {
+  if (process.env.SCREENSHOT_PATH && process.env.CHECK_ONLY !== 'profile') {
     const screenshot = await call('Page.captureScreenshot', { format: 'png' });
     await writeFile(process.env.SCREENSHOT_PATH, Buffer.from(screenshot.data, 'base64'));
   }

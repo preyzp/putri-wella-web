@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   images: {
-    remotePatterns: sanity.configured ? [{ protocol: 'https', hostname: 'cdn.sanity.io', port: '', pathname: `/images/${sanity.value.projectId}/${sanity.value.dataset}/**`, search: '' }] : [],
+    remotePatterns: sanity.configured ? [{ protocol: 'https', hostname: 'cdn.sanity.io', port: '', pathname: `/images/${sanity.value.projectId}/${sanity.value.dataset}/**` }] : [],
   },
   turbopack: {
     rules: {

@@ -1,17 +1,29 @@
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
 import { PublicShell } from '@/components/public-shell';
-import { profileSections } from '@/fixtures/pages';
-import { isLocale } from '@/lib/dictionaries';
+import { AboutContent } from '@/components/about-content';
+import { ContentState } from '@/components/content-state';
+import { readAbout } from '@/sanity/about';
+import type { PublicAbout } from '@/sanity/types';
+import { isLocale, type Locale } from '@/lib/dictionaries';
 import { publicCopy } from '@/lib/public-copy';
 
+async function PublishedAbout({ locale }: { locale: Locale }) {
+  await connection();
+  let data: PublicAbout;
+  try { data = await readAbout(); }
+  catch { return <ContentState locale={locale} page="about" state="error" retryPath={`/${locale}/tentang`} />; }
+  return <AboutContent data={data} locale={locale} />;
+}
+
 export function generateStaticParams() { return [{ locale: 'id' }, { locale: 'en' }]; }
+export const metadata = { title: 'Tentang — Putri Wella Sibarani', description: 'Profil Putri Wella Sibarani. Preview rancangan website.' };
 export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = publicCopy[locale];
-  return <PublicShell locale={locale} title={t.about} intro={t.aboutIntro}>
-    <div className="about-layout"><div className="portrait-placeholder"><p>{t.photo}</p></div>
-      <div className="profile-sections">{profileSections.map((key, index) => <section key={key} aria-labelledby={`profile-${key}`}><h2 id={`profile-${key}`}>{t.profileSections[index]}</h2><p className="excerpt">{t.placeholder}</p></section>)}</div>
-    </div>
+  return <PublicShell locale={locale} title={t.about} blog>
+    <Suspense fallback={<ContentState locale={locale} page="about" state="loading" />}><PublishedAbout locale={locale} /></Suspense>
   </PublicShell>;
 }

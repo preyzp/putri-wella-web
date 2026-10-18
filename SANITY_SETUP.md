@@ -1,6 +1,6 @@
 # Setup Sanity lokal
 
-Bagian blog publik kini membaca konten published Sanity. Profil, aktivitas, kontak, dan intro tetap memakai sumber sebelumnya. Website masih preview rancangan/noindex. Tidak ada seed, pembuatan proyek cloud, preview draft, webhook, atau integrasi interaksi.
+Blog, Tentang, dan Aktivitas kini membaca konten published Sanity. Kontak dan intro tetap memakai sumber sebelumnya. Website masih preview rancangan/noindex. Tidak ada seed, pembuatan proyek cloud, preview draft, webhook, atau integrasi interaksi.
 
 ## Paket dan kompatibilitas
 
@@ -20,7 +20,7 @@ Tidak membutuhkan token pada tahap ini. Jangan mengisi token atau rahasia apa pu
 ## Perilaku saat belum terkonfigurasi
 
 - `/studio` dan subroute-nya menampilkan petunjuk setup, tanpa mencetak nilai env. Nilai kosong, malformed, atau placeholder tidak mengaktifkan Studio. Format yang benar saja belum membuktikan proyek/dataset dan aksesnya valid.
-- Blog publik membutuhkan konfigurasi Sanity dan membaca published pada setiap request. Dataset kosong menampilkan empty state; kegagalan konfigurasi/koneksi menampilkan error aman. Blog tidak memakai fallback dummy, termasuk pada development. Halaman non-blog mempertahankan fixture/placeholder sebelumnya.
+- Blog, Tentang, dan Aktivitas membutuhkan konfigurasi Sanity dan membaca published pada setiap request. Dataset kosong menampilkan empty state; kegagalan konfigurasi/koneksi menampilkan error aman. Halaman tersebut tidak memakai fallback dummy, termasuk pada development. Section profil opsional yang kosong tidak ditampilkan; field bilingual EN kosong memakai ID tanpa membuat terjemahan otomatis.
 - `getContentSource()` di `src/sanity/source.ts` hanya mengizinkan pilihan fixture saat `NODE_ENV=development` dan env Sanity tidak lengkap. Production/test melempar error konfigurasi yang aman; client Sanity tidak membuat identifier rekaan. Kesalahan jaringan/otorisasi CMS tidak ditutupi dengan fixture.
 - Build tanpa env tetap bisa memvalidasi aplikasi dan halaman petunjuk Studio. Itu bukan bukti situs siap rilis production berbasis CMS.
 

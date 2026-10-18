@@ -4,6 +4,8 @@ export type Localized<T> = { id: T; en: T };
 export type PublicImage = {
   _key?: string; _type: 'editorialImage' | 'galleryImage'; alt: string; caption: string | null; credit: string | null;
   asset: { _id: string; url: string; width: number; height: number } | null;
+  crop?: { top: number; bottom: number; left: number; right: number } | null;
+  hotspot?: { x: number; y: number; width: number; height: number } | null;
 };
 export type PoemStanza = { _type: 'poemStanza'; _key: string; text: string };
 export type PublicBody = (PortableTextBlock | PublicImage | PoemStanza)[];
@@ -22,3 +24,4 @@ export type PublicExperience = { _id: string; scopeTitle: Localized<string>; sco
 export type PublicEducation = { _id: string; qualification: Localized<string>; institution: string; fieldOfStudy: Localized<string>; startYear: number | null; endYear: number | null; description: Localized<string> | null };
 export type PublicOrganization = { _id: string; name: string; role: Localized<string>; periodLabel: string | null; description: Localized<string> | null; publicUrl: string | null };
 export type PublicRecognition = { _id: string; kind: 'award' | 'publication'; title: Localized<string>; issuer: string | null; date: string | null; summary: Localized<string> | null; publicUrl: string | null };
+export type PublicAbout = { profile: PublicProfile | null; experiences: PublicExperience[]; education: PublicEducation[]; organizations: PublicOrganization[]; recognition: PublicRecognition[] };
