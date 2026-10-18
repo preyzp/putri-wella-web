@@ -163,15 +163,26 @@ select {
   padding:8px;
   font-size:14px
 }
-.menu-toggle {
-  display:flex;
-  align-items:center;
-  gap:12px;
-  min-height:44px;
-  padding:8px;
-  border:0;
-  background:none;
-  color:var(--foreground)
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.icon-button:hover { border-color: var(--primary); color: var(--primary); }
+.theme-to-light { display: none; }
+:root[data-theme="dark"] .theme-to-dark { display: none; }
+:root[data-theme="dark"] .theme-to-light { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-to-dark { display: none; }
+  :root:not([data-theme]) .theme-to-light { display: block; }
 }
 .main-navigation {
   display:none;
@@ -448,8 +459,10 @@ figcaption { font-size: 14px; color: var(--muted-foreground); line-height: 1.6; 
 .contact-status > p { font-size: 18px; line-height: 1.75; }
 .contact-status dl { margin-top: 32px; }
 .contact-status dl > div { border-top: 1px solid var(--border); padding-block: 24px; }
-.contact-status dt { font-weight: 600; }
+.contact-status dt { font-weight: 600; display: flex; align-items: center; gap: 12px; }
 .contact-status dd { margin: 8px 0 0; color: var(--muted-foreground); }
+.contact-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; color: var(--primary); text-decoration: underline; text-underline-offset: 4px; overflow-wrap: anywhere; }
+.contact-link svg { flex-shrink: 0; }
 @media (max-width: 767px) {
   .main-navigation.is-open { flex-direction: column; gap: 4px; }
 }

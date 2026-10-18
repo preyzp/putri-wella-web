@@ -1,12 +1,12 @@
-# Fondasi dan halaman publik preview — 18 Oktober 2026
+# Fondasi, halaman publik, dan konfigurasi Sanity lokal — 18 Oktober 2026
 
-Task 01 dan halaman publik task 02 selesai sesuai scope pengguna. Beranda tetap satu preview, belum merupakan persetujuan layout final. Task 02 dilanjutkan atas instruksi pengguna tanpa menunggu keputusan layout.
+Task 01, halaman publik task 02, dan konfigurasi lokal Sanity dari task 03 selesai sesuai scope pengguna. Beranda tetap satu preview, belum merupakan persetujuan layout final. Task 02 dilanjutkan atas instruksi pengguna tanpa menunggu keputusan layout. Migrasi halaman publik ke CMS belum dilakukan.
 
-- Mempertahankan Next.js 16.4.2, React 19.3.0, Tailwind CSS 4.3.3, TypeScript 5.9.3, pnpm 12.11.2. Tidak ada dependency baru.
+- Mempertahankan Next.js 16.4.2, React 19.3.0, Tailwind CSS 4.3.3, TypeScript 5.9.3, pnpm 12.11.2. Task 01/02 tidak menambah dependency; paket Sanity untuk tahap lokal dicatat di bawah.
 - Jalankan `pnpm dev`; pemeriksaan: `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build`.
 - `/` redirect ke `/id`; `/en` menggunakan dictionary Inggris. Layout locale menetapkan atribut HTML lang. Artikel contoh tetap berbahasa Indonesia.
 - Token semantik Midnight Azure berada di `src/app/globals.css`, terhubung ke Tailwind v4. DM Serif Display 400 dan DM Sans memakai next/font dan disajikan lokal setelah build. Build pertama memerlukan akses Google Fonts.
-- Tema Sistem/Terang/Gelap: mengikuti sistem sebelum ada pilihan, tersimpan di localStorage dengan key `putri-theme`, inisialisasi sebelum paint, fallback CSS saat JavaScript tidak tersedia, tetap berfungsi ketika penyimpanan diblokir.
+- Tema mengikuti sistem sebelum ada pilihan, dengan toggle ikon Moon/Sun untuk memilih gelap/terang. Pilihan tersimpan di localStorage dengan key `putri-theme`, inisialisasi sebelum paint, fallback CSS saat JavaScript tidak tersedia, dan penyimpanan yang diblokir tidak membuat kontrol error. Tidak ada pemilih tiga mode.
 - Menu mobile memindahkan fokus ke navigasi saat dibuka, Escape menutup dan mengembalikan fokus. Skip link dan fokus terlihat tersedia. Navigasi kini menuju Beranda, Tulisan, Tentang, Aktivitas, dan Kontak; indikator aktif mengikuti halaman. Pemilih bahasa mempertahankan bagian halaman; pada detail artikel menuju listing bahasa tujuan karena naskah belum memiliki terjemahan.
 - Fixture terpusat di `src/fixtures/posts.ts` dan `src/fixtures/pages.ts`, berlabel dummy. Tanggal artikel adalah tanggal contoh yang ditandai pada detail. Tidak ada riwayat, pencapaian, foto diri, atau identitas instansi rekaan. Puisi mempertahankan baris dan bait. Semua halaman preview tetap noindex.
 
@@ -19,14 +19,14 @@ Task 01 dan halaman publik task 02 selesai sesuai scope pengguna. Beranda tetap 
 - `src/proxy.ts` mengecek slug fixture sebelum streaming: slug tidak dikenal di ID/EN di-rewrite ke halaman 404 bawaan dengan HTTP 404. `notFound()` pada detail tetap menjadi pemeriksaan cadangan. Ini diperlukan karena notFound yang terlambat pada streaming bisa menghasilkan HTTP 200. Saat integrasi CMS nanti, pemeriksaan ini harus mengikuti keberadaan konten published, bukan fixture.
 - `/[locale]/tentang`: tujuh bagian profil dengan placeholder berlabel; hanya halaman ini memiliki slot portrait. Tidak ada foto orang lain atau kredensial rekaan.
 - `/[locale]/aktivitas`: tiga ilustrasi SVG lokal dengan alt dan caption bilingual yang jelas sebagai contoh, bukan dokumentasi kegiatan Putri. Tidak memakai lightbox atau kontrol zoom palsu.
-- `/[locale]/kontak`: status informasi belum tersedia dan placeholder email/LinkedIn/Instagram, tanpa alamat rekaan, tautan akun, atau form pengiriman.
+- `/[locale]/kontak`: email, LinkedIn, dan Instagram aktual yang diberikan pengguna, terpusat di `src/lib/contact.ts`. Tidak ada form pengiriman; status placeholder kontak sudah diganti. Tidak menambah lokasi social link pada header/footer/halaman lain.
 - `src/lib/public-copy.ts` memusatkan teks UI halaman baru; shell, kartu tulisan, renderer isi, filter, dan kontrol salin berada di `src/components`. Font, palette, tema, dan komposisi utama beranda dipertahankan.
 
 ## Validasi fondasi sebelumnya
 
 Lint, TypeScript, dan production build lulus. Edge headless pada build produksi memverifikasi ID/EN × light/dark × lebar 360/768/1440 px: tidak ada overflow horizontal. Pemeriksaan juga lulus untuk redirect default, atribut lang, tema mengikuti sistem dan tersimpan setelah reload, fokus menu/Escape, judul panjang, serta whitespace puisi. Skrip pemeriksaan sementara sudah dihapus; tidak menambah test dependency.
 
-## Validasi halaman publik
+## Validasi halaman publik sebelum revisi UI/kontak
 
 Lint, TypeScript, dan build produksi lulus. Pemeriksaan browser Edge headless memverifikasi:
 
@@ -40,8 +40,33 @@ Lint, TypeScript, dan build produksi lulus. Pemeriksaan browser Edge headless me
 
 Ulangi browser checks bila mengubah halaman terkait: `pnpm build`, lalu `node tests/public-pages.mjs`. Tidak membutuhkan dependency tambahan. Default memakai Edge Windows; atur `BROWSER_BIN` untuk executable Chromium lain. Test menjalankan server pada port 3191 dan debugging browser pada 9291 dengan profil sementara terpisah. `CHECK_ONLY=keyboard` membatasi pengujian ke keyboard. Browser/server lokal mungkin membutuhkan izin sesuai sandbox.
 
+## Revisi ikon, header, dan kontak
+
+- Ditambahkan `lucide-react` 1.59.0 melalui pnpm setelah memeriksa peer React 19. Header menggunakan Menu tiga garis/X dan Moon/Sun; Kontak menggunakan Mail dan ArrowUpRight. Instagram dan LinkedIn memakai SVG brand terpisah di `src/components/brand-icons.tsx`. Ikon dekoratif aria-hidden, tautan kontak memiliki teks terlihat, dan tombol ikon memiliki nama aksesibel ID/EN.
+- Menu mobile memakai tombol kotak 44×44 px, nama Buka/Tutup menu (Open/Close menu), aria-expanded/controls, fokus ke navigasi saat dibuka, dan Escape kembali ke trigger. Interaksi blur ke tombol trigger diperbaiki agar klik tutup tidak membuka kembali menu. Navigasi desktop dipertahankan.
+- Toggle tema ikon 44×44 px: Moon saat light (aksi ke dark), Sun saat dark (aksi ke light). Label screen-reader mengikuti aksi dan locale. Kedua varian memiliki markup server/client identik; CSS memilih ikon serta label sesuai resolved theme yang ditetapkan script sebelum paint. Tidak membaca browser saat render React, tidak membuat hydration mismatch, dan ukuran kontrol tetap ketika tema berganti. Toggle menyimpan pilihan eksplisit; kunjungan tanpa pilihan tetap mengikuti sistem, termasuk perubahan sistem saat halaman terbuka. Nilai `system` yang tersimpan dari kontrol lama tetap dikenali.
+- Kontak aktual dari pengguna ada di `src/lib/contact.ts`; dipakai oleh halaman Kontak ID/EN dengan URL social bersih dan email mailto. Link social target blank memakai rel noopener noreferrer. Tidak ada form aktif, integrasi backend, lokasi social baru, atau perubahan CMS/desain beranda.
+- Validasi: `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build` lulus. Browser check terfokus memakai `CHECK_ONLY=header-contact`: ID/EN × sistem light/dark × 360/768/1440 px, accessible name melalui accessibility tree, ikon yang terlihat, persistensi setelah reload, tema mengikuti sistem dan override eksplisit, target sentuh, buka/tutup dengan mouse, Escape/pengembalian fokus, navigasi nyata, alamat kontak/rel, tidak ada form, dan tidak ada overflow. Geometri header/logo/kontrol identik sebelum/sesudah toggle dan kembali identik setelah menu ditutup. Tidak ditemukan error hydration/runtime.
+- `CHECK_ONLY=keyboard` lulus untuk Enter pada menu dan tema, Tab/ring fokus, Escape, serta navigasi/filter yang terdampak. Screenshot mobile ditinjau. Pemeriksaan Sanity/artikel lain yang tidak terdampak tidak diulang. Tes lama yang mengharapkan ketiadaan mailto di Kontak diperbarui agar sesuai kontak aktual.
+- Tidak dilakukan commit atau push. Tidak ada kendala implementasi revisi ini; form kontak tetap menunggu backend sesuai scope.
+
+## Sanity tahap konfigurasi lokal
+
+- Paket resmi dipin setelah memeriksa metadata registry/peer dependencies: `next-sanity` 13.3.4, `sanity` 5.29.0, `@sanity/client` 7.26.2, `@portabletext/react` 7.0.1, `@portabletext/types` 4.0.2, `styled-components` 6.1.19. Node diuji 24.11.1. Sanity 6 dievaluasi lalu tidak dipakai karena dependency CLI meminta TypeScript 6; versi TypeScript proyek dipertahankan. `pnpm peers check` lulus. `esbuild` diizinkan secara spesifik pada allowBuilds pnpm agar instalasi toolchain selesai; izin lain tidak diubah.
+- `src/sanity/schemas/` memuat sepuluh document type sesuai CONTENT_MODEL: siteSettings, profile, post, category, activity, experience, education, organization, recognition, newsletterIssue; disertai object bilingual, gambar/alt/caption, SEO, Portable Text, dan poemStanza. Field Instagram ada sebagai data editorial tersembunyi sesuai model, tanpa fitur Instagram.
+- `sanity.config.ts` dan `src/sanity/structure.ts` mengatur sepuluh menu yang diminta. Singleton Profil/Pengaturan memakai ID tetap dan menu create/duplicate/delete dibatasi. Draft Newsletter hanya editorial; aksi publish/pengiriman tidak ditawarkan. Ini kebijakan UI Studio, bukan batas keamanan API Sanity.
+- `/studio` terpisah dari locale dengan layout sendiri; menggunakan NextStudio dan auth Sanity saat identifier dikonfigurasi. Tanpa konfigurasi valid, catch-all Studio menampilkan petunjuk setup aman/noindex dan tidak mencetak nilai environment. Tidak menggunakan akun atau project ID rekaan.
+- Client `src/sanity/client.ts` server-only: tanpa token, `perspective: published`, API version tetap 2026-10-18, tanpa stega, `no-store`. `queries.ts` dan `types.ts` memuat typed query/parameter/result contracts dan proyeksi eksplisit. Draft/version termasuk referensi tidak terbit disaring. Tidak ada query publik newsletterIssue atau field Instagram. Kontrak tipe ditulis manual; belum TypeGen dari proyek nyata.
+- Renderer `src/sanity/portable-text.tsx` terpisah dari fixture renderer: heading, paragraf, kutipan, list, strong/em/link, gambar, dan bait puisi. Baris/bait tetap terjaga; link tidak aman ditolak; gambar tak tersedia menjadi placeholder dan URL gambar dibatasi pada CDN Sanity proyek/dataset terkonfigurasi.
+- `src/sanity/source.ts` adalah fondasi pemilihan sumber untuk adapter berikutnya. Fixture fallback karena env CMS tidak lengkap hanya diizinkan pada development; production/test melempar error yang aman. Error jaringan/otorisasi tidak diubah menjadi fixture success. Halaman publik belum memakai adapter ini: masih preview fixture yang eksplisit/noindex, bukan fallback CMS production.
+- `.env.example` berisi identifier kosong yang perlu diisi, tanpa token/akun/dataset rekaan. File contoh diizinkan Git; `.env.local` tetap diabaikan. Panduan koneksi, CORS origin lokal, versi, dan batasan ada di `SANITY_SETUP.md`.
+
+Validasi tahap ini: instalasi frozen lockfile, peers, lint, TypeScript, dan build tanpa env lulus. `node tests/sanity-local.mjs` lulus: kompilasi 10 schema, validasi wajib/referensi/HTTPS/alt/bait dan batas lunak judul; pilihan fallback hanya development; semua GROQ diuji offline, draft/version dan field di luar proyeksi tidak bocor, referensi draft tersaring, detail hilang null; renderer menjaga bait/baris, escape teks, menolak link berbahaya, dan menangani gambar tanpa asset. `node tests/studio-setup.mjs` lulus untuk `/studio` dan `/studio/structure` tanpa env/noindex serta regresi terfokus detail/404/redirect EN. Suite UI fondasi yang tidak terdampak tidak diulang.
+
 ## Batasan dan berikutnya
 
-Seluruh naskah, tanggal, gambar, dan data profil masih fixture/placeholder; perlu konten dan persetujuan Putri sebelum rilis. Layout belum final. Integrasi Sanity, komentar, newsletter, kontak backend, dan Instagram belum dibangun sesuai scope. Locale asing masih memakai perilaku notFound Next.js dari fondasi; HTTP 404 tegas sudah diverifikasi khusus slug artikel pada ID/EN.
+Seluruh naskah, tanggal, gambar, dan data profil masih fixture/placeholder; perlu konten dan persetujuan Putri sebelum rilis. Layout belum final. Koneksi Content Lake, login/otorisasi Studio, CORS, upload dan draft/publish belum diuji dengan akun nyata. Tidak ada seed, deploy, pembuatan proyek cloud, migrasi halaman, preview, webhook, komentar, newsletter pengiriman, kontak backend, atau fitur Instagram. Locale asing masih memakai perilaku notFound Next.js dari fondasi; HTTP 404 tegas sudah diverifikasi khusus slug artikel pada ID/EN.
 
-Task berikutnya: review halaman publik dan konten/placeholder bersama pengguna; setelah disetujui, lanjutkan task 03 Sanity. Tidak ada blocker implementasi halaman publik dengan fixture.
+Yang perlu pengguna isi: `NEXT_PUBLIC_SANITY_PROJECT_ID` dan `NEXT_PUBLIC_SANITY_DATASET` dari proyek/dataset yang benar, lalu akses anggota proyek dan CORS origin lokal yang tepat melalui pengaturan Sanity. Tidak ada token yang dibutuhkan saat ini. Konfigurasi berformat valid belum membuktikan akun/dataset bisa diakses. Belum ada konfigurasi akun nyata, sehingga koneksi cloud menjadi batas verifikasi yang tersisa.
+
+Task berikutnya: hubungkan identifier/akun Sanity yang nyata sesuai `SANITY_SETUP.md` dan uji Studio/login/schema terhadap proyek yang disepakati sebelum mengerjakan migrasi halaman publik atau integrasi preview/webhook.

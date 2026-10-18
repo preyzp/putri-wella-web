@@ -7,7 +7,7 @@ export function parseSanityEnvironment(projectId?: string, dataset?: string): Sa
   const project = projectId?.trim();
   const data = dataset?.trim();
   // Empty values and copied placeholders are deliberately not treated as configuration.
-  if (!project || !data || !/^[a-z0-9]{8}$/.test(project) || !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(data) || /placeholder|your[-_]|replace|change[-_]?me|<|>/i.test(`${project} ${data}`)) return { configured: false };
+  if (!project || !data || !/^[-a-z0-9]+$/i.test(project) || !/^~?[a-z0-9][-\w]{0,63}$/.test(data) || /placeholder|your[-_]|replace|change[-_]?me|<|>/i.test(`${project} ${data}`)) return { configured: false };
   return { configured: true, value: { projectId: project, dataset: data, apiVersion: SANITY_API_VERSION } };
 }
 

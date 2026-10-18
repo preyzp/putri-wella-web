@@ -71,7 +71,7 @@ try {
   };
   const count = () => evaluate("document.querySelectorAll('.article-grid .article-item').length");
 
-  if (process.env.CHECK_ONLY !== 'keyboard') {
+  if (!['keyboard', 'header-contact'].includes(process.env.CHECK_ONLY)) {
   const slugs = ['ekonomi', 'ruang-publik', 'jeda', 'pilihan'];
   for (const slug of slugs) {
     assert.equal((await fetch(`${origin}/id/tulisan/${slug}`)).status, 200);
@@ -129,12 +129,101 @@ try {
         await navigate(path);
         assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `No overflow: ${path}, ${theme}, ${width}`);
         assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
-        if (path.endsWith('kontak')) assert.equal(await evaluate("document.querySelectorAll('form, a[href^=mailto], a[href^=tel]').length"), 0);
+        if (path.endsWith('kontak')) {
+          assert.equal(await evaluate("document.querySelectorAll('form').length"), 0);
+          assert.equal(await evaluate("document.querySelector('a[href^=mailto]').getAttribute('href')"), 'mailto:putriwella97@gmail.com');
+        }
       }
       console.log(`PASS public page widths ${width}, ${theme}, ID/EN`);
     }
   }
   }
+  if (process.env.CHECK_ONLY !== 'keyboard') {
+    const errors = [];
+    socket.addEventListener('message', event => {
+      const message = JSON.parse(event.data);
+      if (message.method === 'Runtime.exceptionThrown' || (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error')) errors.push(message.params);
+    });
+    await call('Runtime.enable');
+    const geometry = () => evaluate(`(() => {
+      const rect = selector => { const r = document.querySelector(selector).getBoundingClientRect(); return [r.x,r.y,r.width,r.height]; };
+      return { header: rect('.site-header'), logo: rect('.wordmark'), controls: rect('.header-controls'), theme: rect('.theme-toggle') };
+    })()`);
+    const expectTheme = async (locale, theme) => {
+      assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
+      const label = locale === 'id' ? (theme === 'dark' ? 'Beralih ke tema terang' : 'Beralih ke tema gelap') : (theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+      const { nodes } = await call('Accessibility.getFullAXTree');
+      assert(nodes.some(node => !node.ignored && node.role?.value === 'button' && node.name?.value === label), `Accessible theme action: ${label}`);
+      const expectedIcon = theme === 'dark' ? 'theme-to-light' : 'theme-to-dark';
+      assert.equal(await evaluate(`document.querySelector('.theme-toggle svg.${expectedIcon}').getAttribute('aria-hidden')`), 'true');
+      assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('.theme-toggle svg.${expectedIcon}')).display`), 'none');
+      assert.equal(await evaluate(`document.querySelectorAll('.header-controls select').length`), 0);
+    };
+    for (const locale of ['id', 'en']) for (const system of ['light', 'dark']) {
+      await call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: system }] });
+      await navigate(`/${locale}/kontak`);
+      await evaluate("localStorage.removeItem('putri-theme')");
+      for (const width of [360, 768, 1440]) {
+        await call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
+        await navigate(`/${locale}/kontak`);
+        await call('Page.bringToFront');
+        await expectTheme(locale, system);
+        assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
+        const before = await geometry();
+        assert.equal(before.theme[2], 44); assert.equal(before.theme[3], 44);
+        await evaluate("document.querySelector('.theme-toggle').click()"); await wait(80);
+        const opposite = system === 'dark' ? 'light' : 'dark';
+        await expectTheme(locale, opposite);
+        assert.equal(await evaluate("localStorage.getItem('putri-theme')"), opposite);
+        assert.deepEqual(await geometry(), before, 'Theme toggle must not move the header');
+        await navigate(`/${locale}/kontak`); await expectTheme(locale, opposite);
+        await evaluate("document.querySelector('.theme-toggle').click()"); await wait(50);
+        await expectTheme(locale, system);
+        // Verify all destinations without opening third-party accounts or sending email.
+        const contacts = await evaluate("[...document.querySelectorAll('.contact-link')].map(a => ({href:a.getAttribute('href'),target:a.target,rel:a.rel,text:a.textContent}))");
+        assert.deepEqual(contacts.map(link => link.href), ['mailto:putriwella97@gmail.com','https://www.linkedin.com/in/putriwella97/','https://www.instagram.com/wellasibarani/']);
+        assert(contacts.every(link => link.text.trim()));
+        assert(contacts.filter(link => link.target === '_blank').every(link => link.rel.includes('noopener') && link.rel.includes('noreferrer')));
+        assert.equal(await evaluate("document.querySelectorAll('.contact-status form').length"), 0);
+        assert.equal(await evaluate("document.querySelectorAll('.contact-status svg:not([aria-hidden=true])').length"), 0);
+        if (width === 360) {
+          const buttonLabel = locale === 'id' ? 'Buka menu' : 'Open menu';
+          assert.equal(await evaluate("document.querySelector('.menu-toggle').getAttribute('aria-label')"), buttonLabel);
+          assert(await evaluate("(() => { const r=document.querySelector('.menu-toggle').getBoundingClientRect();return r.width>=44 && r.height>=44; })()"));
+          assert(await evaluate("!!document.querySelector('.menu-toggle .lucide-menu')"));
+          // Actual mouse clicks verify that blur from a focused link does not reopen the menu.
+          const position = await evaluate("(() => {const r=document.querySelector('.menu-toggle').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()");
+          const clickMenu = async () => { await call('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...position});await call('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...position});await wait(70); };
+          await clickMenu();
+          assert.equal(await evaluate("document.querySelector('.menu-toggle').getAttribute('aria-expanded')"), 'true');
+          assert.equal(await evaluate("document.querySelector('.menu-toggle').getAttribute('aria-label')"), locale === 'id' ? 'Tutup menu' : 'Close menu');
+          assert(await evaluate("!!document.querySelector('.menu-toggle .lucide-x') && document.activeElement===document.querySelector('#main-navigation a')"));
+          await clickMenu();
+          assert.equal(await evaluate("document.querySelector('.menu-toggle').getAttribute('aria-expanded')"), 'false');
+          assert.deepEqual(await geometry(), before, 'Closed menu restores the same header geometry');
+          await clickMenu();
+          await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+          assert(await evaluate("document.activeElement===document.querySelector('.menu-toggle') && document.querySelector('.menu-toggle').getAttribute('aria-expanded')==='false'"));
+          await clickMenu();
+          await evaluate("document.querySelector('#main-navigation a[href$=tulisan]').click()");
+          for (let attempt=0;attempt<50;attempt++){if(await evaluate(`location.pathname==='/${locale}/tulisan'`))break;await wait(50);}
+          assert.equal(await evaluate('location.pathname'), `/${locale}/tulisan`);
+        } else assert.equal(await evaluate("getComputedStyle(document.querySelector('.menu-toggle')).display"), 'none');
+        await evaluate("localStorage.removeItem('putri-theme')");
+      }
+      console.log(`PASS header/contact ${locale}, system ${system}: 360/768/1440, icon labels, persistence, geometry, menu/focus/navigation, contact destinations`);
+    }
+    // Following system must remain reactive until the user chooses an explicit theme.
+    await navigate('/en'); await evaluate("localStorage.removeItem('putri-theme')"); await navigate('/en');
+    await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'light'}]}); await wait(70); await expectTheme('en','light');
+    await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'dark'}]}); await wait(70); await expectTheme('en','dark');
+    await evaluate("document.querySelector('.theme-toggle').click()"); await wait(70); await expectTheme('en','light');
+    await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'light'}]}); await wait(70);
+    await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'dark'}]}); await wait(70); await expectTheme('en','light');
+    assert.deepEqual(errors, [], 'No hydration or browser runtime errors');
+    console.log('PASS live system theme, explicit override, no hydration/runtime errors');
+  }
+  if (process.env.CHECK_ONLY !== 'header-contact') {
   await call('Emulation.setDeviceMetricsOverride', { width: 360, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/en/tulisan');
   await call('Page.bringToFront');
@@ -148,6 +237,12 @@ try {
   assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
   await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
   assert(await evaluate("document.activeElement === document.querySelector('.menu-toggle')"));
+  const priorTheme = await evaluate('document.documentElement.dataset.theme');
+  await evaluate("document.querySelector('.theme-toggle').focus()");
+  assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
+  await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+  await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+  assert.equal(await evaluate('document.documentElement.dataset.theme'), priorTheme === 'dark' ? 'light' : 'dark');
   await navigate('/id/tulisan');
   await evaluate("document.querySelector('.filters select').focus()");
   assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
@@ -158,6 +253,7 @@ try {
   await call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.public-page')).paddingTop"), '40px');
   console.log('PASS keyboard menu, navigation focus, filter focus, reduced-motion layout');
+  }
   if (process.env.SCREENSHOT_PATH) {
     const screenshot = await call('Page.captureScreenshot', { format: 'png' });
     await writeFile(process.env.SCREENSHOT_PATH, Buffer.from(screenshot.data, 'base64'));
