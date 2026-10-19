@@ -153,16 +153,39 @@ button,select {
   text-underline-offset:6px;
   text-decoration-thickness:2px
 }
-select {
+.public-select-wrapper {
+  position:relative;
+  display:block;
+  width:100%;
+  min-width:0
+}
+.public-select {
+  appearance:none;
+  display:block;
+  width:100%;
+  min-width:0;
   min-height:44px;
-  max-width:110px;
+  max-width:100%;
   border:1px solid var(--border);
-  border-radius:6px;
+  border-radius:8px;
   background:var(--background);
   color:var(--foreground);
-  padding:8px;
-  font-size:14px
+  padding:10px 44px 10px 16px;
+  font-family:var(--font-dm-sans),sans-serif;
+  font-size:16px;
+  line-height:22px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  overflow:hidden
 }
+.public-select-chevron { position:absolute; top:50%; right:16px; transform:translateY(-50%); pointer-events:none; color:var(--muted-foreground) }
+.public-select:hover:not(:disabled) { border-color:var(--primary) }
+.public-select:focus-visible { outline:2px solid var(--focus); outline-offset:3px; border-color:var(--primary); border-radius:8px }
+.public-select[data-placeholder] { color:var(--muted-foreground) }
+.public-select:disabled { cursor:not-allowed; background:var(--subtle); color:var(--muted-foreground) }
+.public-select option { background:var(--background); color:var(--foreground) }
+.public-select option:checked { background:var(--subtle); color:var(--foreground) }
+.public-select option:disabled { color:var(--muted-foreground) }
 .icon-button {
   display: inline-flex;
   align-items: center;
@@ -440,7 +463,6 @@ h3 {
 .all-writing-link { margin-top: 32px; }
 .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; margin-block: 32px 24px; }
 .filters label { display: flex; flex-direction: column; gap: 8px; flex: 1 1 200px; min-width: 0; }
-.filters select { max-width: none; width: 100%; }
 .action-button { min-height: 44px; border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; background: var(--surface); color: var(--foreground); }
 .action-button:hover { border-color: var(--primary); }
 .action-button:disabled { cursor: wait; opacity: .65; }

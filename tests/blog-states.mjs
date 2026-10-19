@@ -44,12 +44,14 @@ try {
   const detailHtml = await detail.text();
   assert(detailHtml.includes('Controlled published article'));
   assert(detailHtml.includes('baris satu\nbaris dua'));
-  assert.equal((detailHtml.match(/<p class="poem">/g) || []).length, 2);
+  // Streamed PublicShell can contain fallback and resolved copies; inspect one resolved article.
+  const articleHtml = detailHtml.match(/<article class="reading-column"[\s\S]*?<\/article>/g)?.at(-1) || '';
+  assert.equal((articleHtml.match(/<p class="poem">/g) || []).length, 2);
   assert(!detailHtml.includes('DRAFT_SHOULD_NOT_LEAK'));
   assert(!detailHtml.includes('VERSION_SHOULD_NOT_LEAK'));
   if (imageCheck) {
     for (const text of ['Controlled cover alt', 'Controlled cover caption', 'Controlled body alt', 'Controlled body caption']) assert(detailHtml.includes(text));
-    assert.equal((detailHtml.match(/<img /g) || []).length, 2);
+    assert.equal((articleHtml.match(/<img /g) || []).length, 2);
     console.log('PASS CONTROLLED: cover/body image alt and captions rendered using an existing public asset');
   } else console.log('SKIP CONTROLLED image render: run blog-cloud.mjs to obtain a public asset snapshot');
   const listing = await (await fetch(origin + '/en/tulisan')).text();

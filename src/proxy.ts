@@ -4,6 +4,13 @@ import { postHref } from '@/lib/blog';
 
 // Check published existence before streaming, including slugs added after deployment.
 export async function proxy(request: NextRequest) {
+  if (/^\/(id|en)\/preview\//.test(request.nextUrl.pathname)) {
+    const response = NextResponse.next();
+    response.headers.set('Cache-Control', 'private, no-store');
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    response.headers.set('Referrer-Policy', 'same-origin');
+    return response;
+  }
   const [, locale, , slug] = request.nextUrl.pathname.split('/');
   if (locale !== 'id' && locale !== 'en') return NextResponse.next();
   let post;
@@ -16,4 +23,4 @@ export async function proxy(request: NextRequest) {
   if (locale === 'en') return NextResponse.redirect(new URL(postHref(post), request.url), 308);
   return NextResponse.next();
 }
-export const config = { matcher: ['/:locale/tulisan/:slug'] };
+export const config = { matcher: ['/:locale/tulisan/:slug', '/:locale/preview/:path*'] };

@@ -6,6 +6,7 @@ import { categoryLabel, formatLabel, postFormats } from '@/lib/blog';
 import { publicCopy } from '@/lib/public-copy';
 import { PostCard } from './post-card';
 import { BlogState } from './blog-state';
+import { NativeSelect } from './native-select';
 
 export function WritingList({ posts, categories, locale }: { posts: PublicPostSummary[]; categories: PublicCategory[]; locale: Locale }) {
   const [category, setCategory] = useState('all');
@@ -15,8 +16,8 @@ export function WritingList({ posts, categories, locale }: { posts: PublicPostSu
   if (!posts.length) return <BlogState locale={locale} state="empty" />;
   return <>
     <div className="filters">
-      <label>{copy.category}<select value={category} onChange={event => setCategory(event.target.value)}><option value="all">{copy.all}</option>{categories.map(item => <option key={item._id} value={item._id}>{categoryLabel(item, locale)}</option>)}</select></label>
-      <label>{copy.format}<select value={format} onChange={event => setFormat(event.target.value)}><option value="all">{copy.all}</option>{postFormats.map(key => <option key={key} value={key}>{formatLabel(key, locale)}</option>)}</select></label>
+      <label>{copy.category}<NativeSelect value={category} onChange={event => setCategory(event.target.value)}><option value="all">{copy.all}</option>{categories.map(item => <option key={item._id} value={item._id}>{categoryLabel(item, locale)}</option>)}</NativeSelect></label>
+      <label>{copy.format}<NativeSelect value={format} onChange={event => setFormat(event.target.value)}><option value="all">{copy.all}</option>{postFormats.map(key => <option key={key} value={key}>{formatLabel(key, locale)}</option>)}</NativeSelect></label>
       <button className="action-button" type="button" onClick={() => { setCategory('all'); setFormat('all'); }}>{copy.reset}</button>
     </div>
     <p className="meta" role="status">{copy.results}: {filtered.length}</p>

@@ -71,6 +71,84 @@ try {
   };
   const count = () => evaluate("document.querySelectorAll('.article-grid .article-item').length");
 
+  if (process.env.CHECK_ONLY === 'selects') {
+    for (const locale of ['id', 'en']) for (const theme of ['light', 'dark']) {
+      await navigate(`/${locale}/tulisan`); await evaluate(`localStorage.setItem('putri-theme','${theme}')`);
+      for (const width of [360, 768, 1440]) {
+        await call('Emulation.setDeviceMetricsOverride', { width, height: 1100, deviceScaleFactor: 1, mobile: false });
+        await navigate(`/${locale}/tulisan`);
+        for (let attempt = 0; attempt < 100; attempt++) {
+          if (await evaluate("document.querySelectorAll('select').length===2")) break;
+          await wait(80);
+        }
+        assert.equal(await evaluate("document.querySelectorAll('select').length"), 2);
+        assert.equal(await count(), 3);
+        const controls = await evaluate(`Array.from(document.querySelectorAll('.public-select'), select => {
+          const style=getComputedStyle(select), rect=select.getBoundingClientRect(), icon=select.parentElement.querySelector('svg'), box=icon.getBoundingClientRect();
+          return {height:rect.height,radius:style.borderRadius,left:style.paddingLeft,right:style.paddingRight,font:style.fontSize,appearance:style.appearance,overflow:style.textOverflow,color:style.color,iconRight:rect.right-box.right,iconSize:box.width,iconHidden:icon.getAttribute('aria-hidden'),iconPointer:getComputedStyle(icon).pointerEvents,label:select.labels[0]?.firstChild.textContent.trim(),value:select.value};
+        })`);
+        assert.equal(controls.length, 2);
+        for (const control of controls) {
+          assert(control.height >= 44); assert.equal(control.radius, '8px'); assert.equal(control.left, '16px'); assert.equal(control.right, '44px'); assert.equal(control.font, '16px'); assert.equal(control.appearance, 'none'); assert.equal(control.overflow, 'ellipsis'); assert.equal(control.iconRight, 16); assert.equal(control.iconSize, 18); assert.equal(control.iconHidden, 'true'); assert.equal(control.iconPointer, 'none'); assert(control.label); assert.equal(control.value, 'all');
+        }
+        const beforeWidth = await evaluate("document.querySelector('.filters').getBoundingClientRect().width-document.querySelector('main').clientWidth");
+        await choose(0, 'long-category'); assert.equal(await count(), 1);
+        assert(await evaluate("document.querySelector('.filters select').selectedOptions[0].textContent.length > 180"));
+        assert.equal(await evaluate("document.querySelector('.filters').getBoundingClientRect().width-document.querySelector('main').clientWidth"), beforeWidth, 'Long values stay within the container even when filtering removes the vertical scrollbar');
+        assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
+        await choose(1, 'poem'); assert.equal(await count(), 0);
+        assert(await evaluate("!!document.querySelector('[data-blog-state=filtered-empty]')"));
+        await evaluate("document.querySelector('.filters button').click()"); await wait(80);
+        assert.equal(await count(), 3);
+        assert(await evaluate("[...document.querySelectorAll('.filters select')].every(select=>select.value==='all')"));
+        // Native ArrowDown selection must still drive React filtering.
+        await evaluate("document.querySelector('.filters select').focus()");
+        await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
+        await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 }); await wait(100);
+        assert.equal(await evaluate("document.querySelector('.filters select').selectedIndex"), 1);
+        assert.equal(await count(), 1);
+        assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
+        assert.equal(await evaluate('getComputedStyle(document.activeElement).borderRadius'), '8px');
+        await evaluate("document.querySelector('.filters select').disabled=true");
+        assert.equal(await evaluate("getComputedStyle(document.querySelector('.filters select')).cursor"), 'not-allowed');
+        await evaluate("document.querySelector('.filters select').disabled=false");
+        const position = await evaluate("(()=>{const r=document.querySelector('.filters select').getBoundingClientRect();return {x:r.x+20,y:r.y+20}})()");
+        await call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...position });
+        assert(await evaluate("getComputedStyle(document.querySelector('.filters select')).borderColor===getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || document.querySelector('.filters select').matches(':hover')"));
+        assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
+        assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
+      }
+      console.log(`PASS native selects ${locale}/${theme}: 360/768/1440, labels, shared sizing/icons, long values, keyboard/focus, hover/disabled, filter/empty/reset, no overflow`);
+    }
+  }
+
+  if (process.env.CHECK_ONLY === 'preview') {
+    assert(process.env.PREVIEW_TEST_COOKIE, 'A validated local Draft Mode cookie is required');
+    for (const theme of ['light', 'dark']) {
+      await navigate('/id'); await evaluate(`localStorage.setItem('putri-theme', '${theme}')`);
+      for (const width of [360, 768, 1440]) {
+        await call('Emulation.setDeviceMetricsOverride', { width, height: 1100, deviceScaleFactor: 1, mobile: false });
+        await call('Network.setCookie', { name: '__prerender_bypass', value: process.env.PREVIEW_TEST_COOKIE, url: origin, httpOnly: true });
+        await navigate('/id/preview/tulisan/live');
+        assert.equal(await evaluate("document.querySelector('h1').textContent"), 'DRAFT_EDIT_NEXT_REQUEST');
+        assert(await evaluate("!!document.querySelector('aside[aria-label=\"Preview draft\"]')"));
+        assert(await evaluate("document.querySelector('.article-body .poem').textContent.includes('DRAFT_LINE_ONE\\nDRAFT_LINE_TWO')"));
+        assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
+        assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
+        assert(await evaluate("document.querySelector('meta[name=robots]').content.includes('noindex')"));
+        await evaluate("document.querySelector('aside button').focus()");
+        assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
+        await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+        await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+        for (let attempt = 0; attempt < 80; attempt++) { if (await evaluate("location.pathname==='/id/tulisan/live' && document.querySelector('h1')?.textContent==='PUBLIC_TITLE'")) break; await wait(80); }
+        assert.equal(await evaluate('location.pathname'), '/id/tulisan/live');
+        assert.equal(await evaluate("document.querySelector('h1').textContent"), 'PUBLIC_TITLE');
+        assert(!(await call('Network.getCookies', { urls: [origin] })).cookies.some(cookie => cookie.name === '__prerender_bypass' && cookie.value));
+      }
+      console.log(`PASS CONTROLLED preview browser ${theme}: 360/768/1440, draft rendering, poem, banner/noindex, no overflow, keyboard exit to published and cookie removal`);
+    }
+  }
+
   if (process.env.CHECK_ONLY === 'settings') {
     for (const locale of ['id', 'en']) for (const theme of ['light', 'dark']) {
       await navigate(`/${locale}`);
@@ -187,7 +265,7 @@ try {
       console.log(`PASS profile/activity browser ${locale}, ${theme}, 360/768/1440: responsive, image loads/alt, optional/empty state`);
     }
   }
-  if (!['keyboard', 'header-contact', 'profile', 'home-covers', 'settings'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'header-contact', 'profile', 'home-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
   // Run sanity-local.mjs and blog-cloud.mjs first to obtain a read-only cloud snapshot.
   const { post, categories } = JSON.parse(await readFile('node_modules/.cache/putri-sanity-check/cloud.json', 'utf8'));
   const path = `/id/tulisan/${encodeURIComponent(post.slug)}`;
@@ -257,7 +335,7 @@ try {
     }
   }
   }
-  if (!['keyboard', 'blog', 'profile', 'home-covers', 'settings'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'blog', 'profile', 'home-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
     const errors = [];
     socket.addEventListener('message', event => {
       const message = JSON.parse(event.data);
@@ -342,7 +420,7 @@ try {
     assert.deepEqual(errors, [], 'No hydration or browser runtime errors');
     console.log('PASS live system theme, explicit override, no hydration/runtime errors');
   }
-  if (!['header-contact', 'blog', 'profile', 'home-covers', 'settings'].includes(process.env.CHECK_ONLY)) {
+  if (!['header-contact', 'blog', 'profile', 'home-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
   await call('Emulation.setDeviceMetricsOverride', { width: 360, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/en/tulisan');
   await call('Page.bringToFront');

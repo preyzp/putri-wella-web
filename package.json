@@ -13,6 +13,7 @@
     "@portabletext/types": "4.0.2",
     "@sanity/client": "7.26.2",
     "@sanity/image-url": "2.1.1",
+    "@sanity/preview-url-secret": "4.1.5",
     "lucide-react": "1.59.0",
     "next": "16.4.2",
     "next-sanity": "13.3.4",

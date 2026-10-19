@@ -1,16 +1,14 @@
 import { readSettings } from '@/sanity/settings';
 import { siteName, siteDescription } from '@/lib/site-settings';
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { ArticleReading } from '@/components/article-reading';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { connection } from 'next/server';
-import { SanityImage, SanityPortableText } from '@/sanity/portable-text';
 import { readPost } from '@/sanity/blog';
 import { fetchPublished } from '@/sanity/client';
-import { blogCopy, categoryLabel, formatLabel, postDate, postHref } from '@/lib/blog';
+import { blogCopy, postHref } from '@/lib/blog';
 import { BlogState } from '@/components/blog-state';
-import { CopyLink } from '@/components/copy-link';
 import { PostCard } from '@/components/post-card';
 import { PublicShell } from '@/components/public-shell';
 import { isLocale } from '@/lib/dictionaries';
@@ -41,17 +39,9 @@ async function ArticleContent({ params }: Props) {
     try { related = await fetchPublished('related', { id: post._id, categoryIds: post.categories.map(category => category._id) }); }
     catch { relatedFailed = true; }
   }
-  const date = postDate(post.publishedAt, 'id');
   return <PublicShell locale="id" title={post.title} blog>
 
-    <article className="reading-column" lang={post.language} aria-label={post.title}>
-      <p className="article-meta">{post.categories.map(category => categoryLabel(category, 'id')).join(' · ')} · {formatLabel(post.format, 'id')} · {blogCopy.id.languages[post.language]}{date && <> · <time dateTime={post.publishedAt}>{date}</time></>}</p>
-      {post.excerpt && <p className="article-summary">{post.excerpt}</p>}
-      {post.cover && <SanityImage value={post.cover} />}
-      <SanityPortableText value={post.body || []} />
-      <CopyLink path={postHref(post)} />
-      <Link className="text-link" href="/id/tulisan" prefetch={false}>Kembali ke semua tulisan</Link>
-    </article>
+    <ArticleReading post={post} />
     <section className="related-section" aria-labelledby="related-title"><h2 id="related-title">Tulisan terkait</h2>{relatedFailed ? <BlogState locale="id" state="error" retryPath={postHref(post)} /> : related.length ? <div className="article-grid">{related.map(item => <PostCard key={item._id} post={item} locale="id" />)}</div> : <p className="sample-notice">{blogCopy.id.noRelated}</p>}</section>
   </PublicShell>;
 }
