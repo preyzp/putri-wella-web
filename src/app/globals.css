@@ -376,6 +376,16 @@ h3 {
   color:var(--foreground);
   margin-bottom:8px
 }
+.site-footer { font-family:var(--font-dm-sans),sans-serif }
+.site-footer .footer-name { font-family:inherit; font-weight:500 }
+.footer-identity { min-width:0; flex:1 }
+.footer-details { display:flex; flex-direction:column; align-items:flex-start; gap:16px 24px; min-width:0 }
+.footer-credits { line-height:1.75; min-width:0 }
+.footer-socials { display:flex; flex-shrink:0; gap:12px }
+.footer-social-link:focus-visible { border-radius:6px }
+@media(min-width:768px) {
+  .footer-details { flex-direction:row; align-items:center; flex-wrap:wrap }
+}
 
 @media(min-width:640px) {
   .container {

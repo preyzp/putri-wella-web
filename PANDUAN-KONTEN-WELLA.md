@@ -189,8 +189,8 @@ Subkolom setiap item **Foto dan caption**:
 | Perkenalan | Paragraf pendek di beranda; bukan judul besar hero | Wajib bilingual | `[Perkenalan singkat yang disetujui]` dalam dua bahasa |
 | Label navigasi | Kolom tersedia, tetapi label menu publik masih memakai teks tetap website | Kelompok opsional; jika digunakan, subkelompok `home`, `writing`, `about`, `activities`, `contact` memakai aturan wajib bilingual | Tidak perlu diisi untuk mengganti navigasi saat ini |
 | Email publik yang disetujui | Alamat email pada Kontak | Opsional; alamat email valid, satu alamat saja | `putriwella97@gmail.com`, tanpa awalan `mailto:` |
-| LinkedIn | Tautan LinkedIn pada Kontak | Opsional; validasi Studio HTTPS; publik juga membatasi ke domain LinkedIn yang benar | `https://www.linkedin.com/in/putriwella97/` |
-| Instagram | Tautan Instagram pada Kontak, bukan fitur export | Opsional; validasi Studio HTTPS; publik juga membatasi ke domain Instagram yang benar | `https://www.instagram.com/wellasibarani/` |
+| LinkedIn | Tautan LinkedIn pada Kontak dan ikon footer | Opsional; validasi Studio HTTPS; publik juga membatasi ke domain LinkedIn yang benar | `https://www.linkedin.com/in/putriwella97/` |
+| Instagram | Tautan Instagram pada Kontak dan ikon footer, bukan fitur export | Opsional; validasi Studio HTTPS; publik juga membatasi ke domain Instagram yang benar | `https://www.instagram.com/wellasibarani/` |
 | SEO default | Kelompok SEO Indonesia/English | Opsional; subkolom SEO juga opsional | Isi Meta description yang tepat pada Indonesia dan bila tersedia English |
 | Tulisan pilihan | Menentukan tulisan unggulan beranda | Opsional; maksimal tiga pilihan berbeda, tetapi layout saat ini hanya menampilkan satu yang valid/published | Letakkan tulisan yang paling diutamakan di awal |
 | Pengantar newsletter | Catatan editorial; belum ada section newsletter publik | Opsional bilingual | Tidak perlu diisi sampai fitur disepakati |
@@ -408,6 +408,8 @@ Galeri yang belum mempunyai foto yang dapat ditampilkan mempunyai keadaan kosong
 | Email/LinkedIn/Instagram kosong atau tidak valid | Memakai kontak aktual cadangan di bawah; mengosongkan kolom **tidak menghapus saluran kontak** dari website. |
 | Label navigasi diisi | Menu publik tetap memakai label website yang sudah ada; kolom ini belum terhubung. |
 | Pengantar newsletter / Catatan pandangan pribadi untuk ditinjau diisi | Belum tampil sebagai section publik atau mengaktifkan layanan apa pun. |
+
+Ikon Instagram dan LinkedIn di footer memakai sumber Pengaturan dan cadangan yang sama dengan halaman Kontak. Footer mempertahankan nama situs dan kalimat penutup; copyright menampilkan tahun berjalan serta Putri Wella Sibarani. Kredit “Website by TednCo.” berupa teks biasa, bukan tautan, dan tidak diedit melalui kolom Pengaturan. Tidak ada formulir kontak baru.
 
 Kontak cadangan yang sudah disetujui:
 

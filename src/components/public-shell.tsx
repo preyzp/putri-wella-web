@@ -3,6 +3,7 @@ import { dictionaries, type Locale } from '@/lib/dictionaries';
 import { Suspense } from 'react';
 import { readSettings } from '@/sanity/settings';
 import { siteName as resolveSiteName } from '@/lib/site-settings';
+import { SiteFooter } from './site-footer';
 
 type ShellProps = { locale: Locale; title: string; intro?: string; children: React.ReactNode; blog?: boolean };
 export function PublicShell(props: ShellProps) {
@@ -21,6 +22,6 @@ function ShellView({ locale, title, intro, children, siteName = 'Putri Wella Sib
       <div className="page-heading"><h1>{title}</h1>{intro && <p className="excerpt">{intro}</p>}</div>
       {children}
     </main>
-    <footer className="container site-footer"><div><p className="footer-name">{siteName}</p><p>{t.footer}</p></div></footer>
+    <SiteFooter locale={locale} />
   </>;
 }

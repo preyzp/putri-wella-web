@@ -71,6 +71,44 @@ try {
   };
   const count = () => evaluate("document.querySelectorAll('.article-grid .article-item').length");
 
+  if (process.env.CHECK_ONLY === 'footer') {
+    for (const locale of ['id', 'en']) for (const theme of ['light', 'dark']) {
+      await navigate(`/${locale}`); await evaluate(`localStorage.setItem('putri-theme','${theme}')`);
+      for (const width of [360, 768, 1440]) {
+        await call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
+        for (const page of ['', '/tulisan', '/tentang', '/aktivitas', '/kontak']) {
+          await navigate(`/${locale}${page}`);
+          for (let attempt = 0; attempt < 100; attempt++) {
+            if (await evaluate("document.querySelectorAll('.site-footer').length===1 && document.querySelectorAll('.footer-social-link').length===2 && Array.from(document.querySelectorAll('.footer-social-link'), a=>a.getBoundingClientRect().width).every(width=>width>=44)")) break;
+            await wait(80);
+          }
+          assert.equal(await evaluate("document.querySelectorAll('.site-footer').length"), 1);
+          const text = await evaluate("document.querySelector('.site-footer').textContent");
+          assert(text.includes(`© ${process.env.FOOTER_EXPECT_YEAR} Putri Wella Sibarani.`));
+          assert.equal((text.match(/© /g) || []).length, 1); assert.equal((text.match(/Website by TednCo\./g) || []).length, 1);
+          assert.equal(await evaluate("document.querySelector('.site-footer .footer-name').textContent"), 'CMS_FOOTER_NAME');
+          const links = await evaluate("Array.from(document.querySelectorAll('.footer-social-link'), a=>{const r=a.getBoundingClientRect(),svg=a.querySelector('svg');return {href:a.href,label:a.getAttribute('aria-label'),target:a.target,rel:a.rel,width:r.width,height:r.height,iconWidth:svg.getBoundingClientRect().width,hidden:svg.getAttribute('aria-hidden'),text:a.textContent}})");
+          assert.deepEqual(links.map(link => link.href), ['https://www.instagram.com/approved-footer/', 'https://www.linkedin.com/in/approved-footer/']);
+          assert.deepEqual(links.map(link => link.label), ['Instagram Putri Wella Sibarani', 'LinkedIn Putri Wella Sibarani']);
+          for (const link of links) { assert.equal(link.target, '_blank'); assert(link.rel.includes('noopener') && link.rel.includes('noreferrer')); assert(link.width>=44 && link.height>=44, JSON.stringify({locale,theme,width,page,link})); assert.equal(link.iconWidth,20); assert.equal(link.hidden,'true'); assert.equal(link.text,''); }
+          assert.equal(await evaluate("document.querySelectorAll('.footer-credits a').length"), 0);
+          await evaluate("document.querySelector('.footer-social-link').focus()");
+          await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
+          assert.equal(await evaluate("document.activeElement.getAttribute('aria-label')"), 'LinkedIn Putri Wella Sibarani');
+          assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
+          const hoverPoint = await evaluate("(()=>{const r=document.querySelector('.footer-social-link').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()");
+          await call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...hoverPoint });
+          await wait(200);
+          assert(await evaluate("(()=>{const probe=document.createElement('span');probe.hidden=true;probe.style.color='var(--primary)';document.body.append(probe);const color=getComputedStyle(probe).color;probe.remove();return getComputedStyle(document.querySelector('.footer-social-link')).color===color;})()"), 'Hover uses the theme primary color');
+          assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
+          assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'), `No footer overflow at ${width}`);
+          if (width >= 768) assert.equal(await evaluate("getComputedStyle(document.querySelector('.site-footer')).flexDirection"), 'row');
+        }
+      }
+      console.log(`PASS footer browser ${locale}/${theme}: five public routes at 360/768/1440, runtime copyright, plain credit, CMS brand links/labels, 44px targets/20px icons, Tab focus, responsive/no overflow`);
+    }
+  }
+
   if (process.env.CHECK_ONLY === 'selects') {
     for (const locale of ['id', 'en']) for (const theme of ['light', 'dark']) {
       await navigate(`/${locale}/tulisan`); await evaluate(`localStorage.setItem('putri-theme','${theme}')`);
@@ -287,7 +325,7 @@ try {
       console.log(`PASS profile/activity browser ${locale}, ${theme}, 360/768/1440: responsive, image loads/alt, optional/empty state`);
     }
   }
-  if (!['keyboard', 'header-contact', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'header-contact', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects', 'footer'].includes(process.env.CHECK_ONLY)) {
   // Run sanity-local.mjs and blog-cloud.mjs first to obtain a read-only cloud snapshot.
   const { post, categories } = JSON.parse(await readFile('node_modules/.cache/putri-sanity-check/cloud.json', 'utf8'));
   const path = `/id/tulisan/${encodeURIComponent(post.slug)}`;
@@ -357,7 +395,7 @@ try {
     }
   }
   }
-  if (!['keyboard', 'blog', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'blog', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects', 'footer'].includes(process.env.CHECK_ONLY)) {
     const errors = [];
     socket.addEventListener('message', event => {
       const message = JSON.parse(event.data);
@@ -442,7 +480,7 @@ try {
     assert.deepEqual(errors, [], 'No hydration or browser runtime errors');
     console.log('PASS live system theme, explicit override, no hydration/runtime errors');
   }
-  if (!['header-contact', 'blog', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
+  if (!['header-contact', 'blog', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects', 'footer'].includes(process.env.CHECK_ONLY)) {
   await call('Emulation.setDeviceMetricsOverride', { width: 360, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/en/tulisan');
   await call('Page.bringToFront');

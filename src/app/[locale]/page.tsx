@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import { HomeWriting } from '@/components/home-writing';
 import { BlogState } from '@/components/blog-state';
 import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
 import { dictionaries, isLocale } from '@/lib/dictionaries';
 export function generateStaticParams() { return [{ locale: 'id' }, { locale: 'en' }]; }
 export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, ''); }
@@ -24,7 +25,7 @@ async function HomeContent({ params }: {
   <main id="main" className="container" tabIndex={-1}>
    <section className="intro" aria-labelledby="intro-title"><p className="eyebrow">{t.eyebrow}</p><h1 id="intro-title">{t.title}</h1><div className="intro-bottom"><p>{siteIntroduction(settings, locale)}</p><a className="text-link" href="#tulisan">{t.explore}<span aria-hidden="true">↓</span></a></div></section>
    <Suspense fallback={<BlogState locale={locale} state="loading" />}><HomeWriting locale={locale} /></Suspense>
-  </main><footer className="container site-footer"><div><p className="footer-name">{siteName(settings)}</p><p>{t.footer}</p></div></footer>
+  </main><SiteFooter locale={locale} />
  </>;
 }
 
