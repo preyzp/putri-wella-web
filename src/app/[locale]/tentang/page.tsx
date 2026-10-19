@@ -19,7 +19,7 @@ async function PublishedAbout({ locale }: { locale: Locale }) {
 }
 
 export function generateStaticParams() { return [{ locale: 'id' }, { locale: 'en' }]; }
-export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/tentang', 'Tentang', 'Profil Putri Wella Sibarani. Preview rancangan website.'); }
+export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/tentang', 'Tentang', 'Profil, ruang lingkup pekerjaan, dan tulisan Putri Wella Sibarani.'); }
 export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();

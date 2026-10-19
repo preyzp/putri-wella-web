@@ -160,7 +160,7 @@ try {
           assert.equal(await evaluate("document.querySelector('.wordmark').textContent"), 'CONTROLLED_SITE_NAME.');
           assert.equal(await evaluate("document.querySelector('.footer-name').textContent"), 'CONTROLLED_SITE_NAME');
           assert.equal(await evaluate("document.querySelector('meta[name=description]').content"), locale === 'en' ? 'SEO_EN' : 'SEO_ID_FALLBACK');
-          assert.equal(await evaluate("document.querySelector('link[rel=canonical]').href"), `https://putriwellasibarani.vercel.app/${locale}${page}`);
+          assert.equal(await evaluate("document.querySelector('link[rel=canonical]').href"), new URL(`/${locale}${page}`, process.env.SITE_URL || 'https://putriwella.web.id').href);
           assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
           assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
           assert(!await evaluate("document.querySelector('#main-navigation').textContent.includes('IGNORE_NAV_CMS')"));
@@ -177,13 +177,19 @@ try {
     }
   }
 
-  if (process.env.CHECK_ONLY === 'home-covers') {
-    for (const theme of ['light', 'dark']) {
-      await navigate('/id');
+  if (['home-covers', 'listing-covers'].includes(process.env.CHECK_ONLY)) {
+    const listing = process.env.CHECK_ONLY === 'listing-covers';
+    for (const locale of listing ? ['id', 'en'] : ['id']) for (const theme of ['light', 'dark']) {
+      const path = `/${locale}${listing ? '/tulisan' : ''}`;
+      await navigate(path);
       await evaluate(`localStorage.setItem('putri-theme', '${theme}')`);
       for (const width of [360, 768, 1440]) {
         await call('Emulation.setDeviceMetricsOverride', { width, height: 1200, deviceScaleFactor: 1, mobile: false });
-        await navigate('/id');
+        await navigate(path);
+        if (listing) for (let attempt = 0; attempt < 100; attempt++) {
+          if (await evaluate("document.querySelectorAll('.filters').length===1")) break;
+          await wait(80);
+        }
         for (let attempt = 0; attempt < 100; attempt++) {
           if (await evaluate("!!document.querySelector('.home-latest-cover')")) break;
           await wait(80);
@@ -227,8 +233,24 @@ try {
         assert.equal(await evaluate("document.querySelectorAll('.featured img').length"), 0);
         await evaluate("document.querySelector('.home-latest-link').focus()");
         assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid');
+        if (listing) {
+          await choose(0, 'controlled-category'); assert.equal(await count(), 2);
+          await choose(1, 'article'); assert.equal(await count(), 1);
+          assert(await evaluate("document.querySelector('.home-latest-item h3').textContent.length>180"));
+          if (width === 1440) assert(await evaluate("document.querySelector('.home-latest-cover').getBoundingClientRect().width<350"), 'One filtered result stays one desktop column');
+          await choose(1, 'poem'); assert.equal(await count(), 1);
+          assert.equal(await evaluate("document.querySelectorAll('.home-latest-cover img').length"), 0, 'Filtered coverless post retains placeholder');
+          assert(await evaluate("Math.abs(document.querySelector('.home-latest-cover').getBoundingClientRect().width/document.querySelector('.home-latest-cover').getBoundingClientRect().height-1.6)<0.01"));
+          await choose(0, 'controlled-other'); assert.equal(await count(), 0);
+          assert(await evaluate("!!document.querySelector('[data-blog-state=filtered-empty]')"));
+          await evaluate("document.querySelector('.filters button').click()"); await wait(100);
+          assert.equal(await count(), 3);
+          assert(await evaluate("Array.from(document.querySelectorAll('.filters select'),s=>s.value).every(value=>value==='all')"));
+          assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
+          assert.equal(await evaluate("document.querySelectorAll('.filters .public-select').length"), 2);
+        }
       }
-      console.log(`PASS home covers ${theme}: 360/768/1440, category/thumbnail/title/excerpt/metadata order, 12/16/10px gaps, contained 16:10 images, single-column width, links/focus, no overflow${process.env.HOME_COVERS_CONTROLLED ? ', controlled covers/long title/crop' : ', real cloud'}`);
+      console.log(`PASS ${listing ? 'listing' : 'home'} covers ${locale}/${theme}: 360/768/1440, category/thumbnail/title/excerpt/metadata order, 12/16/10px gaps, contained 16:10 images, single-column width, links/focus, no overflow${process.env.HOME_COVERS_CONTROLLED ? ', controlled covers/long title/crop' : ', real cloud'}${listing ? ', category/format filters, multiple/single/empty results, reset, native dropdowns' : ''}`);
     }
   }
 
@@ -265,7 +287,7 @@ try {
       console.log(`PASS profile/activity browser ${locale}, ${theme}, 360/768/1440: responsive, image loads/alt, optional/empty state`);
     }
   }
-  if (!['keyboard', 'header-contact', 'profile', 'home-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'header-contact', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
   // Run sanity-local.mjs and blog-cloud.mjs first to obtain a read-only cloud snapshot.
   const { post, categories } = JSON.parse(await readFile('node_modules/.cache/putri-sanity-check/cloud.json', 'utf8'));
   const path = `/id/tulisan/${encodeURIComponent(post.slug)}`;
@@ -286,7 +308,7 @@ try {
     const total = await count(); assert(total > 0);
     if (post.categories[0]) {
       await choose(0, post.categories[0]._id);
-      assert(await evaluate(`!!document.querySelector('.article-item h3 a[href=${JSON.stringify(path)}]')`));
+      assert(await evaluate(`!!document.querySelector('.article-item a[href=${JSON.stringify(path)}]')`));
       const category = categories.find(item => item._id === post.categories[0]._id);
       assert(await evaluate(`document.querySelector('.filters select').textContent.includes(${JSON.stringify(category.title[locale]?.trim() || category.title.id)})`));
     }
@@ -294,13 +316,13 @@ try {
     await choose(1, post.format === 'poem' ? 'article' : 'poem');
     if (await count() === 0) assert(await evaluate("!!document.querySelector('[data-blog-state=filtered-empty]')"));
     await evaluate("document.querySelector('.filters button').click()"); await wait(70); assert.equal(await count(), total);
-    assert(await evaluate("[...document.querySelectorAll('.article-item h3 a')].every(link => link.getAttribute('href').startsWith('/id/tulisan/'))"));
+    assert(await evaluate("[...document.querySelectorAll('.article-item a')].every(link => link.getAttribute('href').startsWith('/id/tulisan/'))"));
   }
   console.log('PASS filters, combined empty results, reset, canonical article links');
 
   await navigate(path);
   for (let attempt=0;attempt<80;attempt++){if(await evaluate("!!document.querySelector('.reading-column')"))break;await wait(100);}
-  assert.equal(await evaluate("document.querySelector('link[rel=canonical]').getAttribute('href')"), new URL(path, process.env.SITE_URL || 'https://putriwellasibarani.vercel.app').href);
+  assert.equal(await evaluate("document.querySelector('link[rel=canonical]').getAttribute('href')"), new URL(path, process.env.SITE_URL || 'https://putriwella.web.id').href);
   assert.equal(await evaluate("document.querySelector('h1').textContent"), post.title);
   assert(await evaluate("!!document.querySelector('time[datetime]')"));
   assert.equal(await evaluate("document.querySelectorAll('.related-section a[href]').length"), post.relatedPosts.length);
@@ -335,7 +357,7 @@ try {
     }
   }
   }
-  if (!['keyboard', 'blog', 'profile', 'home-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
+  if (!['keyboard', 'blog', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
     const errors = [];
     socket.addEventListener('message', event => {
       const message = JSON.parse(event.data);
@@ -420,7 +442,7 @@ try {
     assert.deepEqual(errors, [], 'No hydration or browser runtime errors');
     console.log('PASS live system theme, explicit override, no hydration/runtime errors');
   }
-  if (!['header-contact', 'blog', 'profile', 'home-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
+  if (!['header-contact', 'blog', 'profile', 'home-covers', 'listing-covers', 'settings', 'preview', 'selects'].includes(process.env.CHECK_ONLY)) {
   await call('Emulation.setDeviceMetricsOverride', { width: 360, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('/en/tulisan');
   await call('Page.bringToFront');

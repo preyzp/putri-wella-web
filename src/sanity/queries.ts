@@ -15,10 +15,11 @@ const homeLatestSummary = `{_id,title,"slug":slug.current,language,format,excerp
 
 // Result contracts are maintained alongside each projection until account-backed TypeGen is configured.
 export const queries = {
+  sitemap: defineQuery(`{"posts":*[_type == "post" && defined(slug.current) && ${published}] | order(slug.current asc) {"slug":slug.current,"updatedAt":_updatedAt,publishedAt},"settings":*[_type == "siteSettings" && _id == "siteSettings" && ${published}][0]._updatedAt,"about":*[_type in ["profile","experience","education","organization","recognition"] && ${published}]._updatedAt,"activities":*[_type == "activity" && ${published}]._updatedAt,"categories":*[_type == "category" && ${published}]._updatedAt}`),
   home: defineQuery(`{"featured":*[_type == "siteSettings" && _id == "siteSettings" && ${published}][0]{"post":(featuredPosts[]->)[${published} && defined(slug.current)][0]${summary}}.post,"latest":*[_type == "post" && defined(slug.current) && ${published}] | order(publishedAt desc, _id asc)[0...3]${homeLatestSummary}}`),
   postRoute: defineQuery(`*[_type == "post" && slug.current == $slug && ${published}][0]{"slug":slug.current,language}`),
   related: defineQuery(`*[_type == "post" && _id != $id && defined(slug.current) && ${published}] | order(count(categories[_ref in $categoryIds]) desc, publishedAt desc)[0...2]${summary}`),
-  posts: defineQuery(`*[_type == "post" && defined(slug.current) && ${published}] | order(publishedAt desc, _id asc) ${summary}`),
+  posts: defineQuery(`*[_type == "post" && defined(slug.current) && ${published}] | order(publishedAt desc, _id asc) ${homeLatestSummary}`),
   post: defineQuery(`*[_type == "post" && slug.current == $slug && ${published}][0]{_id,title,"slug":slug.current,language,format,excerpt,publishedAt,"categories":coalesce((categories[]->)[${published}]${category},[]),cover${image},body${body},"tags":coalesce(tags,[]),"previousSlugs":coalesce(previousSlugs,[]),"relatedPosts":coalesce((relatedPosts[]->)[${published}]${summary},[]),seo${seo}}`),
   categories: defineQuery(`*[_type == "category" && ${published}] | order(sortOrder asc, title.id asc) ${category}`),
   settings: defineQuery(`*[_type == "siteSettings" && _id == "siteSettings" && ${published}][0]{siteName,introduction${localized},navigationLabels{home${localized},writing${localized},about${localized},activities${localized},contact${localized}},publicEmail,linkedInUrl,instagramUrl,defaultSeo{id${seo},en${seo}},"featuredPosts":coalesce((featuredPosts[]->)[${published}]${summary},[]),newsletterIntro${localized},personalViewsNote${localized}}`),
@@ -31,6 +32,7 @@ export const queries = {
 } as const;
 
 export type QueryResults = {
+  sitemap: { posts: { slug: string; updatedAt: string | null; publishedAt: string | null }[]; settings: string | null; about: string[]; activities: string[]; categories: string[] };
   home: { featured: PublicPostSummary | null; latest: PublicPostSummary[] };
   postRoute: { slug: string; language: 'id' | 'en' } | null;
   related: PublicPostSummary[];

@@ -12,6 +12,8 @@ import { BlogState } from '@/components/blog-state';
 import { PostCard } from '@/components/post-card';
 import { PublicShell } from '@/components/public-shell';
 import { isLocale } from '@/lib/dictionaries';
+import { seoImage } from '@/lib/seo-image';
+import { siteOrigin } from '@/lib/site-metadata';
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 // Only root locales are prerendered; article slugs are resolved on every request.
@@ -21,8 +23,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
     const [post, settings] = await Promise.all([readPost(slug), readSettings()]);
-    return { title: post ? `${post.title} — ${siteName(settings)}` : 'Tulisan tidak ditemukan', description: post?.seo?.description?.trim() || post?.excerpt || siteDescription(settings, 'id'), alternates: post ? { canonical: postHref(post) } : undefined };
-  } catch { return { title: 'Tulisan belum dapat dimuat' }; }
+    if (!post) return { title: 'Tulisan tidak ditemukan', robots: { index: false, follow: false } };
+    const title = post.seo?.title?.trim() || `${post.title} — ${siteName(settings)}`;
+    const description = post.seo?.description?.trim() || post.excerpt || siteDescription(settings, 'id');
+    const image = seoImage(post.cover) || seoImage(post.seo?.ogImage) || seoImage(settings?.defaultSeo?.id?.ogImage);
+    return { metadataBase: siteOrigin(), title, description, robots: { index: true, follow: true }, alternates: { canonical: postHref(post) }, openGraph: { type: 'article', url: postHref(post), title, description, siteName: siteName(settings), locale: post.language === 'en' ? 'en_US' : 'id_ID', ...(post.publishedAt && Number.isFinite(Date.parse(post.publishedAt)) ? { publishedTime: post.publishedAt } : {}), images: image ? [image] : [] } };
+  } catch { return { title: 'Tulisan belum dapat dimuat', robots: { index: false, follow: false } }; }
 }
 async function ArticleContent({ params }: Props) {
   await connection();

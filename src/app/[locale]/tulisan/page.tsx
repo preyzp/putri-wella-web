@@ -21,7 +21,7 @@ async function PublishedWriting({ locale }: { locale: Locale }) {
 }
 
 export function generateStaticParams() { return [{ locale: 'id' }, { locale: 'en' }]; }
-export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/tulisan', 'Tulisan', 'Tulisan yang diterbitkan dalam bahasa naskah aslinya. Preview rancangan website Putri Wella Sibarani.'); }
+export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/tulisan', 'Tulisan', 'Tulisan Putri Wella Sibarani dalam bahasa naskah aslinya.'); }
 export default async function WritingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();

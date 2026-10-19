@@ -10,7 +10,7 @@ import { readSettings } from '@/sanity/settings';
 import { Suspense } from 'react';
 
 export function generateStaticParams() { return [{ locale: 'id' }, { locale: 'en' }]; }
-export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/kontak', 'Kontak', 'Preview rancangan website tulisan Putri Wella Sibarani. Konten contoh, bukan naskah final.'); }
+export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) { return pageMetadata(params, '/kontak', 'Kontak', 'Hubungi Putri Wella Sibarani melalui email, LinkedIn, atau Instagram.'); }
 async function ContactContent({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();

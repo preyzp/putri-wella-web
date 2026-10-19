@@ -5,7 +5,7 @@ import { isLocale } from '@/lib/dictionaries';
 import '../globals.css';
 const sans = DM_Sans({ variable: '--font-dm-sans', subsets: ['latin'], display: 'swap' });
 const serif = DM_Serif_Display({ variable: '--font-dm-serif', weight: '400', subsets: ['latin'], display: 'swap' });
-export const metadata: Metadata = { metadataBase: siteOrigin(), title: 'Putri Wella Sibarani — Preview', description: 'Preview rancangan website tulisan Putri Wella Sibarani. Konten contoh, bukan naskah final.', robots: { index: false, follow: false } };
+export const metadata: Metadata = { metadataBase: siteOrigin(), title: 'Putri Wella Sibarani', description: 'Tulisan Putri Wella Sibarani tentang ekonomi, kebijakan publik, dan sastra.', robots: { index: true, follow: true } };
 // Before-paint initialization. Storage may be unavailable in restricted browsers.
 const themeScript = `(function(){var p='system';try{p=localStorage.getItem('putri-theme')||'system'}catch(e){}document.documentElement.dataset.theme=p==='light'||p==='dark'?p:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')})()`;
 export default async function RootLayout({ children, params }: {

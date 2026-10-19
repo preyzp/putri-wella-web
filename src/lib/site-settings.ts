@@ -8,7 +8,7 @@ export function siteName(settings: PublicSettings | null) { return settings?.sit
 export function siteIntroduction(settings: PublicSettings | null, locale: Locale) {
   return localizedText(settings?.introduction, locale) || dictionaries[locale].intro;
 }
-export function siteDescription(settings: PublicSettings | null, locale: Locale, fallback = 'Ruang tulisan Putri Wella Sibarani. Preview rancangan website editorial.') {
+export function siteDescription(settings: PublicSettings | null, locale: Locale, fallback = 'Tulisan Putri Wella Sibarani tentang ekonomi, kebijakan publik, dan sastra.') {
   return settings?.defaultSeo?.[locale]?.description?.trim() || settings?.defaultSeo?.id?.description?.trim() || fallback;
 }
 function social(value: string | null | undefined, host: string, fallback: { href: string; label: string }) {

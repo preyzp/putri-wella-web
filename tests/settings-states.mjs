@@ -10,12 +10,13 @@ const state = { mode: 'populated', documents: [] };
 const save = () => writeFile(statePath, JSON.stringify(state));
 await save();
 const preload = new URL('./helpers/sanity-fetch-preload.mjs', import.meta.url).href;
+const siteUrl = new URL(process.env.SITE_URL || 'https://putriwella.web.id').origin;
 let logs = '';
-const server = spawn(process.execPath, ['--import', preload, 'node_modules/next/dist/bin/next', 'start', '--port', '3195'], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, SANITY_TEST_STATE_FILE: statePath, SITE_URL: 'https://putriwellasibarani.vercel.app' } });
+const server = spawn(process.execPath, ['--import', preload, 'node_modules/next/dist/bin/next', 'start', '--port', '3195'], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, SANITY_TEST_STATE_FILE: statePath, SITE_URL: siteUrl } });
 server.stdout.on('data', value => { logs += value; }); server.stderr.on('data', value => { logs += value; });
 const origin = 'http://127.0.0.1:3195';
 const html = async path => (await fetch(origin + path)).text();
-const canonical = (markup, path) => assert(markup.includes(`<link rel="canonical" href="https://putriwellasibarani.vercel.app${path}"`), `Absolute canonical: ${path}`);
+const canonical = (markup, path) => assert(markup.includes(`<link rel="canonical" href="${siteUrl}${path}"`), `Absolute canonical: ${path}`);
 const defaults = markup => { for (const value of ['mailto:putriwella97@gmail.com', 'https://www.linkedin.com/in/putriwella97/', 'https://www.instagram.com/wellasibarani/']) assert(markup.includes(`href="${value}"`)); };
 try {
   let ready = false;

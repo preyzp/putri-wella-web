@@ -4,7 +4,7 @@ import type { PublicCategory, PublicPostSummary } from '@/sanity/types';
 import type { Locale } from '@/lib/dictionaries';
 import { categoryLabel, formatLabel, postFormats } from '@/lib/blog';
 import { publicCopy } from '@/lib/public-copy';
-import { PostCard } from './post-card';
+import { HomeLatestPost } from './home-latest-post';
 import { BlogState } from './blog-state';
 import { NativeSelect } from './native-select';
 
@@ -21,6 +21,6 @@ export function WritingList({ posts, categories, locale }: { posts: PublicPostSu
       <button className="action-button" type="button" onClick={() => { setCategory('all'); setFormat('all'); }}>{copy.reset}</button>
     </div>
     <p className="meta" role="status">{copy.results}: {filtered.length}</p>
-    {filtered.length ? <div className="article-grid">{filtered.map(post => <PostCard key={post._id} post={post} locale={locale} />)}</div> : <div className="empty-state" data-blog-state="filtered-empty"><p>{copy.empty}</p></div>}
+    {filtered.length ? <div className="article-grid">{filtered.map(post => <HomeLatestPost key={post._id} post={post} locale={locale} />)}</div> : <div className="empty-state" data-blog-state="filtered-empty"><p>{copy.empty}</p></div>}
   </>;
 }
